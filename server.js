@@ -2,12 +2,45 @@ require('dotenv').config();
 const fetch = require('node-fetch').default;
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'build')));
+
+const SESSIONS_FILE = path.join(__dirname, 'sessions.json');
+
+function loadCards() {
+  try {
+    const data = fs.readFileSync(SESSIONS_FILE, 'utf8');
+    return JSON.parse(data).cards || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCards(cards) {
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify({ cards }));
+}
+
+app.get('/cards', (req, res) => {
+  const cards = loadCards();
+  res.json({ cards });
+});
+
+app.post('/cards', (req, res) => {
+  const cards = loadCards();
+  cards.push(req.body);
+  saveCards(cards);
+  res.json({ cards });
+});
+
+app.delete('/cards', (req, res) => {
+  saveCards([]);
+  res.json({ cards: [] });
+});
 
 app.post('/analyze', async (req, res) => {
   try {
