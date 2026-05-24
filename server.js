@@ -73,7 +73,8 @@ app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+
+    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -86,14 +87,41 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}" sports card. Find real sold prices. Reply with ONLY this JSON, no other text: {"sales":[{"price":150.00,"date":"May 2025","title":"listing title"}],"suggestedComp":150.00}`
+          content: `Search eBay sold listings for this sports card: "${cardDesc}". Find and list the actual sold prices with dates.`
         }]
       })
     });
-    const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
-    const text = (data.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
-    const match = text.match(/\{[\s\S]*\}/);
+
+    const searchData = await searchResponse.json();
+    if (searchData.error) return res.status(500).json({ error: searchData.error.message });
+    const searchText = (searchData.content || []).map(b => b.text || '').join('');
+
+    const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `Based on this text about eBay sold listings, extract the prices and return ONLY a JSON object with no other text:
+${searchText}
+
+Return this exact format:
+{"sales":[{"price":150.00,"date":"May 2025","title":"card title"}],"suggestedComp":150.00}
+
+The suggestedComp should be the average price. If no prices found, use your best estimate based on the card described.`
+        }]
+      })
+    });
+
+    const parseData = await parseResponse.json();
+    const parseText = (parseData.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
+    const match = parseText.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
     res.json(JSON.parse(match[0]));
   } catch (err) {
