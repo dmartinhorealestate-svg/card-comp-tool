@@ -11,7 +11,7 @@ function App() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetch('http://localhost:3001/cards')
+    fetch('/cards')
       .then(res => res.json())
       .then(savedCards => {
         setCards(savedCards);
@@ -61,7 +61,7 @@ setCardData(parsed);
     const value = parseFloat(compValue);
     if (isNaN(value)) return;
     const newCard = { cardData, compValue: value };
-    await fetch('http://localhost:3001/cards', {
+    await fetch('/cards', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newCard),
@@ -76,7 +76,7 @@ setCardData(parsed);
   }
 
   async function clearSession() {
-    await fetch('http://localhost:3001/cards', { method: 'DELETE' });
+    await fetch('/cards', { method: 'DELETE' });
     setCards([]);
     setTotal(0);
   }
