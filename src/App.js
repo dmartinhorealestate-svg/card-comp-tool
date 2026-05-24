@@ -48,7 +48,7 @@ function App() {
         body: JSON.stringify({ imageBase64 }),
       });
       const data = await response.json();
-      const text = data.content[0].text;
+      const text = data.content.map(b => b.text || "").join("");
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON found');
       const parsed = JSON.parse(jsonMatch[0]);
