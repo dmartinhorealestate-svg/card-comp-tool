@@ -73,7 +73,6 @@ app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -85,21 +84,14 @@ app.post('/comp', async (req, res) => {
         model: 'claude-sonnet-4-5',
         max_tokens: 2048,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [
-          {
-            role: 'user',
-            content: `Search eBay for recently sold listings of this sports card: "${cardDesc}". Find the actual sold prices. Then respond with ONLY a JSON object in this exact format, no other text before or after:
-{"sales":[{"price":150.00,"date":"May 2025","title":"card listing title"}],"suggestedComp":150.00}
-
-If you find multiple sales, include up to 3. The suggestedComp should be the average of the sales prices. You MUST include real prices from the search results.`
-          }
-        ]
+        messages: [{
+          role: 'user',
+          content: `Search eBay sold listings for "${cardDesc}" sports card. Find real sold prices. Reply with ONLY this JSON, no other text: {"sales":[{"price":150.00,"date":"May 2025","title":"listing title"}],"suggestedComp":150.00}`
+        }]
       })
     });
-
     const data = await response.json();
     if (data.error) return res.status(500).json({ error: data.error.message });
-
     const text = (data.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
@@ -111,4 +103,7 @@ If you find multiple sales, include up to 3. The suggestedComp should be the ave
 });
 
 app.get('/{*path}', (req, res) => {
-  res.send
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+app.listen(process.env.PORT || 3001, () => console.log('Server running'));
