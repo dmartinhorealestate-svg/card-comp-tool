@@ -72,29 +72,21 @@ app.post('/analyze', async (req, res) => {
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
-    const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
 
-    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
+    const query = [player, year, brand, variation, grade]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, '+');
+
+    const searchUrl = `https://www.130point.com/sales/?q=${query}`;
+
+    const pageRes = await fetch(searchUrl, {
       headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 2048,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{
-          role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}" sports card. Find the actual sold prices.`
-        }]
-      })
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     });
 
-    const searchData = await searchResponse.json();
-    if (searchData.error) return res.status(500).json({ error: searchData.error.message });
-    const searchText = (searchData.content || []).map(b => b.text || '').join('');
+    const html = await pageRes.text();
 
     const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -108,14 +100,12 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Here is text about eBay sold listings for a sports card:
+          content: `This is HTML from 130point.com showing eBay sold listings for a sports card. Extract the recent sold prices and dates from this HTML. Return ONLY this JSON with no other text:
+{"sales":[{"price":150.00,"date":"May 2025","title":"listing title"}],"suggestedComp":150.00}
 
-${searchText}
+The suggestedComp should be the average price. Here is the HTML:
 
-Extract ONLY the actual sale prices (not card numbers, not years, not quantities). Sale prices are dollar amounts people paid. Return ONLY this JSON with no other text:
-{"sales":[{"price":150.00,"date":"May 2025","title":"listing title here"}],"suggestedComp":150.00}
-
-The suggestedComp should be the average of the sale prices found.`
+${html.substring(0, 8000)}`
         }]
       })
     });
