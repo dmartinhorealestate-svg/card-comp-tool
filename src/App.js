@@ -47,12 +47,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64 }),
       });
-      const data = await response.json();
-      const text = data.content.map(b => b.text || "").join("");
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON found');
-      const parsed = JSON.parse(jsonMatch[0]);
-      setCardData(parsed);
+      const parsed = await response.json();
+if (parsed.error) throw new Error(parsed.error);
+setCardData(parsed);
+
     } catch (err) {
       setCardData({ error: 'Could not parse card data. Try again.' });
     }
