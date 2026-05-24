@@ -1,0 +1,30 @@
+[
+  {
+    "cardData": {
+      "player": "Joey Votto",
+      "year": "2020",
+      "set": "National Treasures",
+      "variation": "Steel City Collectibles Gear",
+      "printRun": "1/6",
+      "tags": [
+        "Autograph",
+        "Patch",
+        "Numbered"
+      ]
+    },
+    "compValue": 8
+  },
+  {
+    "cardData": {
+      "player": "Kurt Warner",
+      "year": "2017",
+      "set": "National Treasures",
+      "variation": "",
+      "printRun": "",
+      "tags": [
+        "Autograph"
+      ]
+    },
+    "compValue": 150
+  }
+]
