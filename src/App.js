@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
-  const [imageFile, setImageFile] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
   const [imageURL, setImageURL] = useState(null);
   const [cardData, setCardData] = useState(null);
@@ -56,7 +55,7 @@ function App() {
       const parsed = await response.json();
       if (parsed.error) throw new Error(parsed.error);
       setCardData(parsed);
-      setEditData({ ...parsed });
+      setEditData({ ...parsed, rookie: false });
     } catch (err) {
       setCardData({ error: 'Could not parse card data. Try again.' });
     }
@@ -113,7 +112,7 @@ function App() {
           <h3>Session Cards:</h3>
           {cards.map((c, i) => (
             <div key={i} style={{ padding: '10px', background: '#f0f9f0', borderRadius: '6px', marginBottom: '8px' }}>
-              <strong>Card {i + 1}:</strong> {c.player} {c.year} - ${c.compValue.toFixed(2)}
+              <strong>Card {i + 1}:</strong> {c.player} {c.year} {c.rookie ? '⭐ RC' : ''} - ${c.compValue.toFixed(2)}
             </div>
           ))}
           <button onClick={clearSession} style={{ padding: '10px 20px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px', marginBottom: '20px' }}>
@@ -154,6 +153,23 @@ function App() {
               />
             </div>
           ))}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Rookie Card?</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => handleEditChange('rookie', true)}
+                style={{ padding: '10px 24px', background: editData.rookie ? '#4CAF50' : '#ddd', color: editData.rookie ? 'white' : '#333', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: 'bold' }}>
+                Yes
+              </button>
+              <button
+                onClick={() => handleEditChange('rookie', false)}
+                style={{ padding: '10px 24px', background: !editData.rookie ? '#e74c3c' : '#ddd', color: !editData.rookie ? 'white' : '#333', border: 'none', borderRadius: '6px', fontSize: '16px', fontWeight: 'bold' }}>
+                No
+              </button>
+            </div>
+          </div>
+
           <button onClick={confirmCard} style={{ padding: '10px 20px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px' }}>
             Confirm Card
           </button>
