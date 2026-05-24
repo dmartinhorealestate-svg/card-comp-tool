@@ -74,7 +74,7 @@ app.post('/comp', async (req, res) => {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const step1 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -87,21 +87,51 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}" sports card. Return ONLY this JSON with real prices, no other text: {"sales":[{"price":150.00,"date":"May 2025","title":"listing"}],"suggestedComp":150.00}`
+          content: `Search eBay sold listings for "${cardDesc}" sports card. List the sold prices and dates you find.`
         }]
       })
     });
 
-    const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    const step1Data = await step1.json();
+    if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
 
-    const text = (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
+    const searchText = (step1Data.content || [])
+      .map(b => b.type === 'text' ? b.text : '')
+      .join(' ');
+
+    console.log('Search text:', searchText.substring(0, 200));
+
+    const step2 = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        messages: [{
+          role: 'user',
+          content: `Here are eBay sold listing results for a sports card:
+
+"${searchText}"
+
+Extract the sold prices. Return ONLY this JSON, nothing else:
+{"sales":[{"price":150.00,"date":"May 2025","title":"card name"}],"suggestedComp":150.00}`
+        }]
+      })
+    });
+
+    const step2Data = await step2.json();
+    const text = (step2Data.content || [])
+      .map(b => b.text || '')
       .join('')
       .replace(/```json/g,'')
       .replace(/```/g,'')
       .trim();
+
+    console.log('Parse text:', text.substring(0, 200));
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
