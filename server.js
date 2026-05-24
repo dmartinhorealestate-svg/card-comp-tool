@@ -69,6 +69,26 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
+function extractAllText(content) {
+  let text = '';
+  for (const block of (content || [])) {
+    if (block.type === 'text') {
+      text += block.text + ' ';
+    } else if (block.type === 'tool_result') {
+      if (Array.isArray(block.content)) {
+        for (const inner of block.content) {
+          if (inner.type === 'text') text += inner.text + ' ';
+        }
+      } else if (typeof block.content === 'string') {
+        text += block.content + ' ';
+      }
+    } else if (block.type === 'tool_use') {
+      if (block.input) text += JSON.stringify(block.input) + ' ';
+    }
+  }
+  return text.trim();
+}
+
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
@@ -95,11 +115,9 @@ app.post('/comp', async (req, res) => {
     const step1Data = await step1.json();
     if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
 
-    const searchText = (step1Data.content || [])
-      .map(b => b.type === 'text' ? b.text : '')
-      .join(' ');
-
-    console.log('Search text:', searchText.substring(0, 200));
+    const searchText = extractAllText(step1Data.content);
+    console.log('Search text length:', searchText.length);
+    console.log('Search text preview:', searchText.substring(0, 300));
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -113,11 +131,11 @@ app.post('/comp', async (req, res) => {
         max_tokens: 512,
         messages: [{
           role: 'user',
-          content: `Here are eBay sold listing results for a sports card:
+          content: `Here are eBay search results for "${cardDesc}":
 
-"${searchText}"
+${searchText.substring(0, 3000)}
 
-Extract the sold prices. Return ONLY this JSON, nothing else:
+Extract the actual sold prices. Return ONLY this JSON, no other text:
 {"sales":[{"price":150.00,"date":"May 2025","title":"card name"}],"suggestedComp":150.00}`
         }]
       })
@@ -131,7 +149,7 @@ Extract the sold prices. Return ONLY this JSON, nothing else:
       .replace(/```/g,'')
       .trim();
 
-    console.log('Parse text:', text.substring(0, 200));
+    console.log('Parse result:', text.substring(0, 300));
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
