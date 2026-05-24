@@ -83,13 +83,17 @@ app.post('/comp', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
+        max_tokens: 2048,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: 'You are a JSON API. You must always respond with only valid JSON. Never write prose or explanations.',
-        messages: [{
-          role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}" sports card. Return ONLY this JSON with no other text: {"sales":[{"price":150,"date":"May 18","title":"card name"}],"suggestedComp":150}`
-        }]
+        messages: [
+          {
+            role: 'user',
+            content: `Search eBay for recently sold listings of this sports card: "${cardDesc}". Find the actual sold prices. Then respond with ONLY a JSON object in this exact format, no other text before or after:
+{"sales":[{"price":150.00,"date":"May 2025","title":"card listing title"}],"suggestedComp":150.00}
+
+If you find multiple sales, include up to 3. The suggestedComp should be the average of the sales prices. You MUST include real prices from the search results.`
+          }
+        ]
       })
     });
 
@@ -107,7 +111,4 @@ app.post('/comp', async (req, res) => {
 });
 
 app.get('/{*path}', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
-app.listen(process.env.PORT || 3001, () => console.log('Server running'));
+  res.send
