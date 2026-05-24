@@ -72,47 +72,43 @@ app.post('/analyze', async (req, res) => {
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
+    const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
 
-    const query = [player, year, brand, variation, grade]
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, '+');
-
-    const searchUrl = `https://www.130point.com/sales/?q=${query}`;
-
-    const pageRes = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-
-    const html = await pageRes.text();
-
-    const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
+        max_tokens: 4000,
+        thinking: { type: 'enabled', budget_tokens: 2000 },
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `This is HTML from 130point.com showing eBay sold listings for a sports card. Extract the recent sold prices and dates from this HTML. Return ONLY this JSON with no other text:
-{"sales":[{"price":150.00,"date":"May 2025","title":"listing title"}],"suggestedComp":150.00}
-
-The suggestedComp should be the average price. Here is the HTML:
-
-${html.substring(0, 8000)}`
+          content: `Search eBay sold listings for "${cardDesc}" sports card. Find 1-3 real recent sold prices. Then output ONLY this JSON with actual prices, no other text:
+{"sales":[{"price":150.00,"date":"May 2025","title":"listing title"}],"suggestedComp":150.00}`
         }]
       })
     });
 
-    const parseData = await parseResponse.json();
-    const parseText = (parseData.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
-    const match = parseText.match(/\{[\s\S]*\}/);
+    const data = await response.json();
+    if (data.error) return res.status(500).json({ error: data.error.message });
+
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('')
+      .replace(/```json/g,'')
+      .replace(/```/g,'')
+      .trim();
+
+    console.log('Response text:', text.substring(0, 300));
+
+    const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
     res.json(JSON.parse(match[0]));
   } catch (err) {
