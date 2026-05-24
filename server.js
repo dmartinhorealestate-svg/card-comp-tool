@@ -73,8 +73,31 @@ app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${cardNumber || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+
+    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2048,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{
+          role: 'user',
+          content: `Search eBay sold listings for this sports card: "${cardDesc}". Find the last 1-3 actual sold prices on eBay.`
+        }]
+      })
+    });
+
+    const searchData = await searchResponse.json();
+    console.log('Search response:', JSON.stringify(searchData).substring(0, 500));
+
+    const searchText = searchData.content.map(b => b.text || '').join('');
+
+    const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -84,19 +107,20 @@ app.post('/comp', async (req, res) => {
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 1024,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for this sports card: "${cardDesc}". Find the last 1-3 actual sold prices. Respond with ONLY a JSON object like this: {"sales": [{"price": 150, "date": "May 18"}, {"price": 120, "date": "May 10"}], "suggestedComp": 135}. No markdown, no extra text.`
+          content: `Based on this information about recent eBay sales for "${cardDesc}": \n\n${searchText}\n\nRespond with ONLY a JSON object like this: {"sales": [{"price": 150, "date": "May 18"}, {"price": 120, "date": "May 10"}], "suggestedComp": 135}. If no sales found, use empty array and suggestedComp of null. No markdown, no extra text.`
         }]
       })
     });
-    const data = await response.json();
-    const text = data.content.map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
+
+    const parseData = await parseResponse.json();
+    const text = parseData.content.map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return res.status(500).json({ error: 'No comp data found' });
+    if (!match) return res.status(500).json({ error: 'Could not parse comp data' });
     res.json(JSON.parse(match[0]));
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
