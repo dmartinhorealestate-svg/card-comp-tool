@@ -82,19 +82,19 @@ app.post('/comp', async (req, res) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}". Find 1-3 recent sold prices. Reply with ONLY this JSON: {"sales":[{"price":150,"date":"May 18"}],"suggestedComp":150}. No markdown.`
+          content: `Search eBay sold listings for "${cardDesc}". Find 1-3 recent sold prices. Return ONLY this exact JSON format, no markdown, no explanation: {"sales":[{"price":150,"date":"May 18","title":"card name here"}],"suggestedComp":150}`
         }]
       })
     });
 
     const data = await response.json();
     if (data.error) return res.status(500).json({ error: data.error.message });
-    
+
     const text = (data.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
