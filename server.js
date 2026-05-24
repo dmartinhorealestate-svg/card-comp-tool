@@ -72,7 +72,7 @@ app.post('/analyze', async (req, res) => {
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
-    const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${cardNumber || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
+    const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -82,12 +82,13 @@ app.post('/comp', async (req, res) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1024,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: 'You are a JSON API. You must always respond with only valid JSON. Never write prose or explanations.',
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}". Find 1-3 recent sold prices. Return ONLY this exact JSON format, no markdown, no explanation: {"sales":[{"price":150,"date":"May 18","title":"card name here"}],"suggestedComp":150}`
+          content: `Search eBay sold listings for "${cardDesc}" sports card. Return ONLY this JSON with no other text: {"sales":[{"price":150,"date":"May 18","title":"card name"}],"suggestedComp":150}`
         }]
       })
     });
