@@ -40,7 +40,7 @@ app.post('/analyze', async (req, res) => {
 });
 
 // Catch-all: serve React app
-app.get('*', (req, res) => {
+app.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
