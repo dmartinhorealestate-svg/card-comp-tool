@@ -82,8 +82,6 @@ function extractAllText(content) {
       } else if (typeof block.content === 'string') {
         text += block.content + ' ';
       }
-    } else if (block.type === 'tool_use') {
-      if (block.input) text += JSON.stringify(block.input) + ' ';
     }
   }
   return text.trim();
@@ -107,7 +105,7 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search eBay sold listings for "${cardDesc}" sports card. List the sold prices and dates you find.`
+          content: `Search the web for: "${cardDesc} sold price site:130point.com OR site:psacard.com OR site:ebay.com". What prices do you find?`
         }]
       })
     });
@@ -116,8 +114,8 @@ app.post('/comp', async (req, res) => {
     if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
 
     const searchText = extractAllText(step1Data.content);
-    console.log('Search text length:', searchText.length);
-    console.log('Search text preview:', searchText.substring(0, 300));
+    console.log('Search length:', searchText.length);
+    console.log('Search preview:', searchText.substring(0, 400));
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -131,12 +129,14 @@ app.post('/comp', async (req, res) => {
         max_tokens: 512,
         messages: [{
           role: 'user',
-          content: `Here are eBay search results for "${cardDesc}":
+          content: `Based on this web search about "${cardDesc}" card prices:
 
 ${searchText.substring(0, 3000)}
 
-Extract the actual sold prices. Return ONLY this JSON, no other text:
-{"sales":[{"price":150.00,"date":"May 2025","title":"card name"}],"suggestedComp":150.00}`
+Extract any dollar amounts that represent sale prices. Return ONLY this JSON:
+{"sales":[{"price":150.00,"date":"2025","title":"${cardDesc}"}],"suggestedComp":150.00}
+
+If no prices found, estimate based on the card description.`
         }]
       })
     });
