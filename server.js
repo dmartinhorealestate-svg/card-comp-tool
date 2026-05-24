@@ -74,7 +74,7 @@ app.post('/comp', async (req, res) => {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -85,60 +85,46 @@ app.post('/comp', async (req, res) => {
         model: 'claude-sonnet-4-5',
         max_tokens: 2048,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [
-          {
-            role: 'user',
-            content: `Search eBay sold listings for "${cardDesc}" sports card and tell me the sold prices you find.`
-          }
-        ]
+        messages: [{
+          role: 'user',
+          content: `Search eBay sold listings for "${cardDesc}" sports card. Find the actual sold prices.`
+        }]
       })
     });
 
-    const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    const searchData = await searchResponse.json();
+    if (searchData.error) return res.status(500).json({ error: searchData.error.message });
+    const searchText = (searchData.content || []).map(b => b.text || '').join('');
 
-    const allText = (data.content || []).map(b => {
-      if (b.type === 'text') return b.text;
-      if (b.type === 'tool_result') return JSON.stringify(b.content);
-      return '';
-    }).join(' ');
+    const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: `Here is text about eBay sold listings for a sports card:
 
-    const prices = [];
-    const priceRegex = /\$?([\d,]+\.?\d{0,2})/g;
-    let match;
-    while ((match = priceRegex.exec(allText)) !== null) {
-      const val = parseFloat(match[1].replace(',', ''));
-      if (val > 1 && val < 100000) prices.push(val);
-    }
+${searchText}
 
-    if (prices.length === 0) {
-      const parseResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 512,
-          messages: [{
-            role: 'user',
-            content: `Based on your knowledge of sports card values, what would a "${cardDesc}" sell for on eBay? Give me only a JSON object like this with no other text: {"sales":[{"price":50.00,"date":"2025","title":"estimated value"}],"suggestedComp":50.00}`
-          }]
-        })
-      });
-      const parseData = await parseResponse.json();
-      const parseText = (parseData.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
-      const jsonMatch = parseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return res.status(500).json({ error: 'No comp data found' });
-      return res.json(JSON.parse(jsonMatch[0]));
-    }
+Extract ONLY the actual sale prices (not card numbers, not years, not quantities). Sale prices are dollar amounts people paid. Return ONLY this JSON with no other text:
+{"sales":[{"price":150.00,"date":"May 2025","title":"listing title here"}],"suggestedComp":150.00}
 
-    const avg = prices.slice(0, 3).reduce((a, b) => a + b, 0) / Math.min(prices.length, 3);
-    const sales = prices.slice(0, 3).map(p => ({ price: p, date: '2025', title: cardDesc }));
-    res.json({ sales, suggestedComp: Math.round(avg * 100) / 100 });
+The suggestedComp should be the average of the sale prices found.`
+        }]
+      })
+    });
 
+    const parseData = await parseResponse.json();
+    const parseText = (parseData.content || []).map(b => b.text || '').join('').replace(/```json/g,'').replace(/```/g,'').trim();
+    const match = parseText.match(/\{[\s\S]*\}/);
+    if (!match) return res.status(500).json({ error: 'No comp data found' });
+    res.json(JSON.parse(match[0]));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
