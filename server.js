@@ -72,7 +72,6 @@ app.post('/analyze', async (req, res) => {
   "Elite" (if elite level player),
   "Superstar" (if superstar player),
   "Breakout" (if breakout/rising player)
-
 No markdown, no extra text, only JSON.` }
           ]
         }]
@@ -102,12 +101,20 @@ async function getEbayToken() {
   return data.access_token;
 }
 
-async function searchEbayListings(query) {
+app.post('/comp', async (req, res) => {
   try {
+    const { player, year, brand, cardNumber, variation, grade } = req.body;
+    const gradeClean = grade || 'Raw';
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long' });
+    const currentYear = now.getFullYear();
+
     const token = await getEbayToken();
-    const encoded = encodeURIComponent(query);
+    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${gradeClean}`;
+    const encoded = encodeURIComponent(searchQuery);
+
     const response = await fetch(
-      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&limit=8&sort=price`,
+      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&limit=5&sort=price`,
       {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -115,74 +122,27 @@ async function searchEbayListings(query) {
         }
       }
     );
+
     const data = await response.json();
-    return data.itemSummaries || [];
-  } catch (err) {
-    console.error('eBay search error:', err);
-    return [];
-  }
-}
+    const items = data.itemSummaries || [];
 
-app.post('/comp', async (req, res) => {
-  try {
-    const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
-    const gradeClean = grade || 'Raw';
-    const now = new Date();
-    const currentMonth = now.toLocaleString('default', { month: 'long' });
-    const currentYear = now.getFullYear();
-    const cardDesc = `${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${gradeClean}`.trim();
-
-    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${gradeClean}`;
-    const ebayItems = await searchEbayListings(searchQuery);
-
-    let ebayText = '';
-    if (ebayItems.length > 0) {
-      ebayText = ebayItems.map(item =>
-        `${item.title}: $${item.price?.value} (${item.condition || 'Unknown condition'})`
-      ).join('\n');
+    if (items.length === 0) {
+      return res.status(500).json({ error: 'No comp data found' });
     }
 
-    console.log('eBay listings:', ebayText);
+    const sales = items.slice(0, 3).map(item => ({
+      price: parseFloat(item.price?.value || 0),
+      date: `${currentMonth} ${currentYear}`,
+      title: item.title
+    }));
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 1024,
-        messages: [{
-          role: 'user',
-          content: `I need comp values for: ${cardDesc}
-Today: ${currentMonth} ${currentYear}
+    const avg = sales.reduce((sum, s) => sum + s.price, 0) / sales.length;
 
-eBay current listings (use these as price reference):
-${ebayText || 'No eBay results found'}
-
-These are current asking prices. Sold prices are typically 10-20% lower than asking prices.
-Pick the 3 listings that most closely match "${cardDesc}" and estimate what they would SELL for (not asking price).
-Ignore any listings that don't match the grade or card.
-
-Return ONLY this JSON:
-{"sales":[{"price":PRICE1,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"},{"price":PRICE2,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"},{"price":PRICE3,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"}],"suggestedComp":AVERAGE}`
-        }]
-      })
+    res.json({
+      sales,
+      suggestedComp: Math.round(avg * 100) / 100
     });
 
-    const data = await response.json();
-    const text = (data.content || [])
-      .map(b => b.text || '')
-      .join('')
-      .replace(/```json/g,'')
-      .replace(/```/g,'')
-      .trim();
-
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return res.status(500).json({ error: 'No comp data found' });
-    res.json(JSON.parse(match[0]));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
