@@ -140,7 +140,6 @@ function App() {
       offerTotal += card.compValue * pct;
     });
     setOfferData({
-      fullValue: total,
       offerPrice: Math.round(offerTotal * 100) / 100
     });
     setShowOffer(true);
@@ -183,10 +182,6 @@ function App() {
           {showOffer && offerData && (
             <div style={{ padding: '20px', background: '#1a1a2e', borderRadius: '8px', marginBottom: '20px', color: 'white' }}>
               <h3 style={{ marginTop: 0 }}>Collection Offer</h3>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '18px' }}>
-                <span>100% Value:</span>
-                <strong>${offerData.fullValue.toFixed(2)}</strong>
-              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '22px', background: '#9C27B0', padding: '12px', borderRadius: '6px' }}>
                 <span>Offer Price:</span>
                 <strong>${offerData.offerPrice.toFixed(2)}</strong>
@@ -249,7 +244,7 @@ function App() {
               <p style={{ fontSize: '13px', color: '#666', marginTop: '6px' }}>+ Graded tag auto-applied</p>
             )}
             <p style={{ fontSize: '13px', color: '#9C27B0', marginTop: '4px' }}>
-              Total tags: {(editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)} 
+              Total tags: {(editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)}
               {((editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)) >= 4 ? ' → 85% offer' : ' → 70% offer'}
             </p>
           </div>
