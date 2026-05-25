@@ -109,14 +109,13 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search 130point.com for "${player} ${cardNumber || ''} ${brand} ${year} ${gradeClean}" and find the actual sold prices listed on that page.`
+          content: `Search Google for: "${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean} sold eBay ${currentYear}". What are the actual recent sold prices you find?`
         }]
       })
     });
 
     const step1Data = await step1.json();
     const searchText = step1Data.error ? '' : extractAllText(step1Data.content);
-    console.log('Search result:', searchText.substring(0, 500));
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -130,18 +129,16 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `I need accurate current eBay sold prices for: ${cardDesc}
+          content: `Card: ${cardDesc}
+Today: ${currentMonth} ${currentYear}
+Search results: ${searchText.substring(0, 2000)}
 
-Web search results: ${searchText.substring(0, 2000)}
+Extract up to 3 real sold prices from the search results. Use ONLY prices actually found in the search data. Do not make up prices or use the example format prices.
 
-Today is ${currentMonth} ${currentYear}.
+If no real prices in search data, estimate current market value for this specific card — be conservative and realistic for ${currentYear} prices.
 
-Using the search results above, extract up to 3 real sold prices with their actual dates. Do NOT make up or copy example prices. Only use prices that actually appear in the search data.
-
-If no real prices found in search data, give your best estimate for the current market value of this specific card in ${currentYear}.
-
-Return ONLY this JSON format with real prices:
-{"sales":[{"price":0.00,"date":"Month Year","title":"card name"}],"suggestedComp":0.00}`
+Return ONLY valid JSON:
+{"sales":[{"price":REAL_PRICE,"date":"REAL_DATE","title":"CARD_NAME"}],"suggestedComp":AVERAGE}`
         }]
       })
     });
