@@ -101,8 +101,7 @@ app.post('/comp', async (req, res) => {
     ].filter(Boolean);
 
     const searchQuery = parts.join(' ');
-    const encoded = encodeURIComponent(searchQuery);
-    const cardLadderUrl = `https://www.cardladder.com/cards/search?q=${encoded}`;
+    const cardLadderUrl = `https://app.cardladder.com`;
     
     res.json({ cardLadderUrl, searchQuery });
   } catch (err) {
