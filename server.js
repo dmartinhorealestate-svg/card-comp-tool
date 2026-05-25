@@ -88,22 +88,35 @@ No markdown, no extra text, only JSON.` }
   }
 });
 
-async function searchEbaySold(query) {
+async function getEbayToken() {
+  const credentials = Buffer.from(`${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`).toString('base64');
+  const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
+  });
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function searchEbayListings(query) {
   try {
+    const token = await getEbayToken();
     const encoded = encodeURIComponent(query);
-    const url = `https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findCompletedItems&SERVICE-VERSION=1.0.0&SECURITY-APPNAME=${process.env.EBAY_APP_ID}&RESPONSE-DATA-FORMAT=JSON&keywords=${encoded}&itemFilter(0).name=SoldItemsOnly&itemFilter(0).value=true&sortOrder=EndTimeSoonest&paginationInput.entriesPerPage=5`;
-    
-    const response = await fetch(url);
+    const response = await fetch(
+      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&limit=8&sort=price`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+        }
+      }
+    );
     const data = await response.json();
-    
-    const items = data?.findCompletedItemsResponse?.[0]?.searchResult?.[0]?.item || [];
-    console.log('eBay sold items found:', items.length);
-    
-    return items.map(item => ({
-      title: item.title?.[0],
-      price: item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__,
-      date: item.listingInfo?.[0]?.endTime?.[0]
-    }));
+    return data.itemSummaries || [];
   } catch (err) {
     console.error('eBay search error:', err);
     return [];
@@ -119,18 +132,17 @@ app.post('/comp', async (req, res) => {
     const currentYear = now.getFullYear();
     const cardDesc = `${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${gradeClean}`.trim();
 
-    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean}`;
-    const ebayItems = await searchEbaySold(searchQuery);
+    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${gradeClean}`;
+    const ebayItems = await searchEbayListings(searchQuery);
 
     let ebayText = '';
     if (ebayItems.length > 0) {
-      ebayText = ebayItems.map(item => {
-        const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recent';
-        return `${item.title}: $${parseFloat(item.price).toFixed(2)} sold ${date}`;
-      }).join('\n');
+      ebayText = ebayItems.map(item =>
+        `${item.title}: $${item.price?.value} (${item.condition || 'Unknown condition'})`
+      ).join('\n');
     }
 
-    console.log('eBay sold results:', ebayText);
+    console.log('eBay listings:', ebayText);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -147,13 +159,15 @@ app.post('/comp', async (req, res) => {
           content: `I need comp values for: ${cardDesc}
 Today: ${currentMonth} ${currentYear}
 
-eBay SOLD listings:
-${ebayText || 'No sold listings found'}
+eBay current listings (use these as price reference):
+${ebayText || 'No eBay results found'}
 
-Use the actual sold prices above. If no sold listings, estimate current ${currentYear} market value.
+These are current asking prices. Sold prices are typically 10-20% lower than asking prices.
+Pick the 3 listings that most closely match "${cardDesc}" and estimate what they would SELL for (not asking price).
+Ignore any listings that don't match the grade or card.
 
 Return ONLY this JSON:
-{"sales":[{"price":PRICE1,"date":"DATE1","title":"TITLE1"},{"price":PRICE2,"date":"DATE2","title":"TITLE2"},{"price":PRICE3,"date":"DATE3","title":"TITLE3"}],"suggestedComp":AVERAGE}`
+{"sales":[{"price":PRICE1,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"},{"price":PRICE2,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"},{"price":PRICE3,"date":"${currentMonth} ${currentYear}","title":"MATCHING_TITLE"}],"suggestedComp":AVERAGE}`
         }]
       })
     });
