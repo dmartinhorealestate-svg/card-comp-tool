@@ -91,10 +91,9 @@ function App() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
       setCompResult(data);
-      setCompValue(data.suggestedComp?.toString() || '');
       setConfirmed(true);
     } catch (err) {
-      setCompResult({ error: 'Could not find comps. Try again.' });
+      setCompResult({ error: 'Could not generate Card Ladder link. Try again.' });
     }
     setCompLoading(false);
   }
@@ -251,27 +250,25 @@ function App() {
 
           <button onClick={getComps} disabled={compLoading}
             style={{ padding: '12px 24px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', width: '100%' }}>
-            {compLoading ? 'Finding Comps...' : '🔍 Get Comps'}
+            {compLoading ? 'Loading...' : '🔍 Get Comps'}
           </button>
 
           {compResult && compResult.error && <p style={{ color: 'red', marginTop: '10px' }}>{compResult.error}</p>}
         </div>
       )}
 
-      {confirmed && compResult && (
+      {confirmed && compResult && compResult.cardLadderUrl && (
         <div style={{ marginTop: '20px', padding: '15px', background: '#f3e5f5', borderRadius: '8px' }}>
-          <h3>Recent Sales:</h3>
-          {compResult.sales && compResult.sales.map((s, i) => (
-            <div key={i} style={{ padding: '8px', background: 'white', borderRadius: '6px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{s.date}</span>
-              <strong>${s.price}</strong>
-            </div>
-          ))}
-          <div style={{ marginTop: '12px', padding: '12px', background: '#9C27B0', color: 'white', borderRadius: '6px', textAlign: 'center', fontSize: '18px' }}>
-            Suggested Comp: <strong>${compResult.suggestedComp}</strong>
-          </div>
+          <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
+            Searching for: <strong>{compResult.searchQuery}</strong>
+          </p>
 
-          <h3 style={{ marginTop: '16px' }}>Enter Comp Value:</h3>
+          <a href={compResult.cardLadderUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'block', padding: '14px', background: '#1a1a2e', color: 'white', borderRadius: '6px', textAlign: 'center', fontSize: '18px', textDecoration: 'none', marginBottom: '16px' }}>
+            📊 Open in Card Ladder
+          </a>
+
+          <h3>Enter Comp Value:</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <input type="number" placeholder="Enter $ value" value={compValue}
               onChange={e => setCompValue(e.target.value)}

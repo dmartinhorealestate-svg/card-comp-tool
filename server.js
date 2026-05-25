@@ -87,64 +87,25 @@ No markdown, no extra text, only JSON.` }
   }
 });
 
-async function getEbayToken() {
-  const credentials = Buffer.from(`${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`).toString('base64');
-  const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
-  });
-  const data = await response.json();
-  return data.access_token;
-}
-
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade } = req.body;
-    const gradeClean = grade || 'Raw';
-    const now = new Date();
-    const currentMonth = now.toLocaleString('default', { month: 'long' });
-    const currentYear = now.getFullYear();
+    
+    const parts = [
+      player,
+      year,
+      brand,
+      cardNumber ? `#${cardNumber}` : null,
+      variation || null,
+      grade && grade !== 'Raw' ? grade : null
+    ].filter(Boolean);
 
-    const token = await getEbayToken();
-    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${gradeClean}`;
+    const searchQuery = parts.join(' ');
     const encoded = encodeURIComponent(searchQuery);
-
-    const response = await fetch(
-      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&limit=5&sort=price`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-        }
-      }
-    );
-
-    const data = await response.json();
-    const items = data.itemSummaries || [];
-
-    if (items.length === 0) {
-      return res.status(500).json({ error: 'No comp data found' });
-    }
-
-    const sales = items.slice(0, 3).map(item => ({
-      price: parseFloat(item.price?.value || 0),
-      date: `${currentMonth} ${currentYear}`,
-      title: item.title
-    }));
-
-    const avg = sales.reduce((sum, s) => sum + s.price, 0) / sales.length;
-
-    res.json({
-      sales,
-      suggestedComp: Math.round(avg * 100) / 100
-    });
-
+    const cardLadderUrl = `https://www.cardladder.com/cards/search?q=${encoded}`;
+    
+    res.json({ cardLadderUrl, searchQuery });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
