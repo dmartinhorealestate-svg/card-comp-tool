@@ -136,15 +136,12 @@ Web search results: ${searchText.substring(0, 2000)}
 
 Today is ${currentMonth} ${currentYear}.
 
-CRITICAL RULES:
-- Use ONLY prices found in the search results above if they are available
-- If search results have prices, use those exact prices and dates
-- If no search results, use your best estimate but note these are ESTIMATES
-- For a ${year} ${brand} base rookie card graded ${gradeClean}, current market is typically $30-80 range unless it's a star player
-- Do NOT use inflated old prices from 2021-2022 era
+Using the search results above, extract up to 3 real sold prices with their actual dates. Do NOT make up or copy example prices. Only use prices that actually appear in the search data.
 
-Return ONLY this JSON:
-{"sales":[{"price":44.99,"date":"May 2026","title":"${cardDesc}"},{"price":35.55,"date":"May 2026","title":"${cardDesc}"},{"price":36.00,"date":"May 2026","title":"${cardDesc}"}],"suggestedComp":38.85}`
+If no real prices found in search data, give your best estimate for the current market value of this specific card in ${currentYear}.
+
+Return ONLY this JSON format with real prices:
+{"sales":[{"price":0.00,"date":"Month Year","title":"card name"}],"suggestedComp":0.00}`
         }]
       })
     });
