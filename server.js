@@ -110,7 +110,7 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search for: "${searchQuery}". I need actual recent eBay sold prices for this specific card. Look on 130point.com or search Google for recent sales.`
+          content: `Search for: "${searchQuery}". Find at least 3 recent eBay sold prices with dates for this specific card.`
         }]
       })
     });
@@ -118,6 +118,10 @@ app.post('/comp', async (req, res) => {
     const step1Data = await step1.json();
     if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
     const searchText = extractAllText(step1Data.content);
+
+    const now = new Date();
+    const currentMonth = now.toLocaleString('default', { month: 'long' });
+    const currentYear = now.getFullYear();
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -135,10 +139,10 @@ app.post('/comp', async (req, res) => {
 
 ${searchText.substring(0, 4000)}
 
-IMPORTANT: This is a BASE card (not autograph, not patch, not numbered unless specified). Extract only prices that match this exact card. Ignore prices for autographs or premium versions unless the card itself is one.
+Today is ${currentMonth} ${currentYear}. Extract up to 3 recent sold prices with their actual dates. Every sale MUST have a real date like "May 2026" or "Apr 2026" - never use "Date not specified".
 
 Return ONLY this JSON:
-{"sales":[{"price":65.00,"date":"May 2026","title":"card name"},{"price":60.00,"date":"Apr 2026","title":"card name"}],"suggestedComp":62.00}`
+{"sales":[{"price":65.00,"date":"May 2026","title":"2020 Donruss Jordan Love PSA 10"},{"price":58.00,"date":"Apr 2026","title":"2020 Donruss Jordan Love PSA 10"},{"price":55.00,"date":"Mar 2026","title":"2020 Donruss Jordan Love PSA 10"}],"suggestedComp":59.00}`
         }]
       })
     });
