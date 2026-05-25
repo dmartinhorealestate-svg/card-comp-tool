@@ -14,6 +14,7 @@ function App() {
   const [total, setTotal] = useState(0);
   const [showOffer, setShowOffer] = useState(false);
   const [offerData, setOfferData] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch('/cards')
@@ -36,6 +37,7 @@ function App() {
       setConfirmed(false);
       setCompResult(null);
       setCompValue('');
+      setCopied(false);
       const reader = new FileReader();
       reader.onload = () => setImageBase64(reader.result.split(',')[1]);
       reader.readAsDataURL(file);
@@ -82,6 +84,7 @@ function App() {
   async function getComps() {
     setCompLoading(true);
     setCompResult(null);
+    setCopied(false);
     try {
       const response = await fetch('/comp', {
         method: 'POST',
@@ -96,6 +99,12 @@ function App() {
       setCompResult({ error: 'Could not generate Card Ladder link. Try again.' });
     }
     setCompLoading(false);
+  }
+
+  function copySearchText() {
+    navigator.clipboard.writeText(compResult.searchQuery);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   async function addToTotal() {
@@ -119,6 +128,7 @@ function App() {
     setImageBase64(null);
     setCompResult(null);
     setCompValue('');
+    setCopied(false);
     setShowOffer(false);
     setOfferData(null);
   }
@@ -259,13 +269,21 @@ function App() {
 
       {confirmed && compResult && compResult.cardLadderUrl && (
         <div style={{ marginTop: '20px', padding: '15px', background: '#f3e5f5', borderRadius: '8px' }}>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
-            Searching for: <strong>{compResult.searchQuery}</strong>
-          </p>
+
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Search Text:</label>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <div style={{ flex: 1, padding: '10px', background: 'white', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px', wordBreak: 'break-all' }}>
+              {compResult.searchQuery}
+            </div>
+            <button onClick={copySearchText}
+              style={{ padding: '10px 16px', background: copied ? '#4CAF50' : '#555', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', whiteSpace: 'nowrap' }}>
+              {copied ? '✓ Copied!' : 'Copy'}
+            </button>
+          </div>
 
           <a href={compResult.cardLadderUrl} target="_blank" rel="noopener noreferrer"
             style={{ display: 'block', padding: '14px', background: '#1a1a2e', color: 'white', borderRadius: '6px', textAlign: 'center', fontSize: '18px', textDecoration: 'none', marginBottom: '16px' }}>
-            📊 Open in Card Ladder
+            📊 Open Card Ladder
           </a>
 
           <h3>Enter Comp Value:</h3>
