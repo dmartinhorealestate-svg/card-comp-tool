@@ -54,7 +54,26 @@ app.post('/analyze', async (req, res) => {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: 'This is a sports card. Respond with ONLY a JSON object with fields: player, year, brand, cardNumber, variation. No markdown, no extra text.' }
+            { type: 'text', text: `This is a sports card. Analyze it and respond with ONLY a JSON object with these fields:
+- player (string)
+- year (string)
+- brand (string)
+- cardNumber (string)
+- variation (string)
+- tags (array of strings from this list only): 
+  "Auto" (if autograph present),
+  "RPA" (if rookie patch auto),
+  "Numbered" (if print run shown like /10 /99 /149 etc),
+  "Case Hit",
+  "Parallel" (include type like "Parallel - Prizm Gold"),
+  "Rookie" (if rookie card),
+  "GOAT" (if all-time great like Brady, LeBron, Jordan, etc),
+  "HOF" (if hall of famer),
+  "Elite" (if elite level player),
+  "Superstar" (if superstar player),
+  "Breakout" (if breakout/rising player)
+
+No markdown, no extra text, only JSON.` }
           ]
         }]
       })
@@ -111,7 +130,7 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search for "${searchQuery}" on eBay completed listings. I need the actual dollar amounts that this specific graded card sold for recently. List every price you find.`
+          content: `Search for "${searchQuery}" on eBay completed listings. List every price you find.`
         }]
       })
     });
@@ -135,14 +154,7 @@ app.post('/comp', async (req, res) => {
 Today: ${currentMonth} ${currentYear}
 Search results: ${searchText.substring(0, 2000)}
 
-Task: Give me 3 recent sold prices for this card.
-
-Rules:
-- If the search found real prices for this EXACT card and grade, use those
-- If not, use your knowledge of current ${currentYear} market values
-- This is a ${gradeClean} graded card — do not use raw card prices
-- Be realistic for current market, not 2021-2022 peak prices
-- All 3 sales must have different realistic prices and recent dates
+Give me 3 recent sold prices for this card. Use real prices from search if available, otherwise estimate current ${currentYear} market value. Be realistic, not inflated.
 
 Return ONLY this JSON:
 {"sales":[{"price":PRICE1,"date":"DATE1","title":"${cardDesc}"},{"price":PRICE2,"date":"DATE2","title":"${cardDesc}"},{"price":PRICE3,"date":"DATE3","title":"${cardDesc}"}],"suggestedComp":AVERAGE}`
