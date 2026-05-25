@@ -96,6 +96,8 @@ app.post('/comp', async (req, res) => {
     const currentYear = now.getFullYear();
     const cardDesc = `${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${gradeClean}`.trim();
 
+    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean} sold`;
+
     const step1 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -109,7 +111,7 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search Google for: "${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean} sold eBay ${currentYear}". What are the actual recent sold prices you find?`
+          content: `Search for "${searchQuery}" on eBay completed listings. I need the actual dollar amounts that this specific graded card sold for recently. List every price you find.`
         }]
       })
     });
@@ -133,12 +135,17 @@ app.post('/comp', async (req, res) => {
 Today: ${currentMonth} ${currentYear}
 Search results: ${searchText.substring(0, 2000)}
 
-Extract up to 3 real sold prices from the search results. Use ONLY prices actually found in the search data. Do not make up prices or use the example format prices.
+Task: Give me 3 recent sold prices for this card.
 
-If no real prices in search data, estimate current market value for this specific card — be conservative and realistic for ${currentYear} prices.
+Rules:
+- If the search found real prices for this EXACT card and grade, use those
+- If not, use your knowledge of current ${currentYear} market values
+- This is a ${gradeClean} graded card — do not use raw card prices
+- Be realistic for current market, not 2021-2022 peak prices
+- All 3 sales must have different realistic prices and recent dates
 
-Return ONLY valid JSON:
-{"sales":[{"price":REAL_PRICE,"date":"REAL_DATE","title":"CARD_NAME"}],"suggestedComp":AVERAGE}`
+Return ONLY this JSON:
+{"sales":[{"price":PRICE1,"date":"DATE1","title":"${cardDesc}"},{"price":PRICE2,"date":"DATE2","title":"${cardDesc}"},{"price":PRICE3,"date":"DATE3","title":"${cardDesc}"}],"suggestedComp":AVERAGE}`
         }]
       })
     });
