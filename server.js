@@ -90,8 +90,12 @@ function extractAllText(content) {
 app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
-    const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
-    const currentYear = new Date().getFullYear();
+    const gradeClean = grade || 'Raw';
+    const isGraded = gradeClean !== 'Raw';
+    const gradingCo = gradeClean.includes('PSA') ? 'PSA' : gradeClean.includes('BGS') ? 'BGS' : '';
+    const gradeNum = gradeClean.replace('PSA ', '').replace('BGS ', '');
+
+    const searchQuery = `${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${isGraded ? gradingCo + ' ' + gradeNum : 'raw'} sold price 2025 2026`;
 
     const step1 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -106,7 +110,7 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search 130point.com for "${player} ${grade} ${year} ${brand}" sold prices in ${currentYear}. Find the most recent actual sale prices.`
+          content: `Search for: "${searchQuery}". I need actual recent eBay sold prices for this specific card. Look on 130point.com or search Google for recent sales.`
         }]
       })
     });
@@ -127,14 +131,14 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Here is sales data for "${cardDesc}":
+          content: `Here is search data for: ${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${gradeClean}
 
 ${searchText.substring(0, 4000)}
 
-This is a ${grade} graded ${year} ${brand} ${player} card. Based ONLY on the actual sale prices in the data above, give me recent comps. The prices should be realistic for this specific card in ${currentYear}.
+IMPORTANT: This is a BASE card (not autograph, not patch, not numbered unless specified). Extract only prices that match this exact card. Ignore prices for autographs or premium versions unless the card itself is one.
 
 Return ONLY this JSON:
-{"sales":[{"price":75.00,"date":"May 2026","title":"${cardDesc}"},{"price":70.00,"date":"Apr 2026","title":"${cardDesc}"}],"suggestedComp":72.00}`
+{"sales":[{"price":65.00,"date":"May 2026","title":"card name"},{"price":60.00,"date":"Apr 2026","title":"card name"}],"suggestedComp":62.00}`
         }]
       })
     });
