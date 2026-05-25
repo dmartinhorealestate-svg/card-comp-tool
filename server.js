@@ -88,22 +88,40 @@ No markdown, no extra text, only JSON.` }
   }
 });
 
-function extractAllText(content) {
-  let text = '';
-  for (const block of (content || [])) {
-    if (block.type === 'text') {
-      text += block.text + ' ';
-    } else if (block.type === 'tool_result') {
-      if (Array.isArray(block.content)) {
-        for (const inner of block.content) {
-          if (inner.type === 'text') text += inner.text + ' ';
+async function getEbayToken() {
+  const credentials = Buffer.from(`${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`).toString('base64');
+  const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
+  });
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function searchEbaySold(query) {
+  try {
+    const token = await getEbayToken();
+    const encoded = encodeURIComponent(query);
+    const response = await fetch(
+      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&filter=buyingOptions:{FIXED_PRICE},conditions:{PRE_OWNED}&sort=endingSoonest&limit=5`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+          'Content-Type': 'application/json',
         }
-      } else if (typeof block.content === 'string') {
-        text += block.content + ' ';
       }
-    }
+    );
+    const data = await response.json();
+    return data.itemSummaries || [];
+  } catch (err) {
+    console.error('eBay search error:', err);
+    return [];
   }
-  return text.trim();
 }
 
 app.post('/comp', async (req, res) => {
@@ -115,30 +133,17 @@ app.post('/comp', async (req, res) => {
     const currentYear = now.getFullYear();
     const cardDesc = `${year} ${brand} ${player} ${cardNumber ? '#' + cardNumber : ''} ${variation || ''} ${gradeClean}`.trim();
 
-    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean} sold`;
+    const searchQuery = `${player} ${year} ${brand} ${cardNumber ? '#'+cardNumber : ''} ${variation || ''} ${gradeClean}`;
+    const ebayItems = await searchEbaySold(searchQuery);
 
-    const step1 = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{
-          role: 'user',
-          content: `Search for "${searchQuery}" on eBay completed listings. List every price you find.`
-        }]
-      })
-    });
+    let ebayText = '';
+    if (ebayItems.length > 0) {
+      ebayText = ebayItems.map(item => `${item.title}: $${item.price?.value} (${item.condition})`).join('\n');
+    }
 
-    const step1Data = await step1.json();
-    const searchText = step1Data.error ? '' : extractAllText(step1Data.content);
+    console.log('eBay results:', ebayText);
 
-    const step2 = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -150,20 +155,22 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Card: ${cardDesc}
+          content: `I need comp values for: ${cardDesc}
 Today: ${currentMonth} ${currentYear}
-Search results: ${searchText.substring(0, 2000)}
 
-Give me 3 recent sold prices for this card. Use real prices from search if available, otherwise estimate current ${currentYear} market value. Be realistic, not inflated.
+eBay listings found:
+${ebayText || 'No eBay results found'}
+
+Based on the eBay listings above, give me 3 realistic recent sold prices. Use the actual prices from eBay if available. If not available, estimate current market value for ${currentYear}.
 
 Return ONLY this JSON:
-{"sales":[{"price":PRICE1,"date":"DATE1","title":"${cardDesc}"},{"price":PRICE2,"date":"DATE2","title":"${cardDesc}"},{"price":PRICE3,"date":"DATE3","title":"${cardDesc}"}],"suggestedComp":AVERAGE}`
+{"sales":[{"price":PRICE1,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"},{"price":PRICE2,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"},{"price":PRICE3,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"}],"suggestedComp":AVERAGE}`
         }]
       })
     });
 
-    const step2Data = await step2.json();
-    const text = (step2Data.content || [])
+    const data = await response.json();
+    const text = (data.content || [])
       .map(b => b.text || '')
       .join('')
       .replace(/```json/g,'')
