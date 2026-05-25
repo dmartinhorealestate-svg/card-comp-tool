@@ -114,8 +114,6 @@ app.post('/comp', async (req, res) => {
     if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
 
     const searchText = extractAllText(step1Data.content);
-    console.log('Search length:', searchText.length);
-    console.log('Search preview:', searchText.substring(0, 400));
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -148,8 +146,6 @@ If no prices found, estimate based on the card description.`
       .replace(/```json/g,'')
       .replace(/```/g,'')
       .trim();
-
-    console.log('Parse result:', text.substring(0, 300));
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return res.status(500).json({ error: 'No comp data found' });
