@@ -101,11 +101,11 @@ app.post('/comp', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: 2048,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search the web for: "${cardDesc} sold price site:130point.com OR site:psacard.com OR site:ebay.com". What prices do you find?`
+          content: `Search for recent sold prices for this sports card: "${cardDesc}". Search 130point.com and psacard.com for recent sales data. Find at least 3 recent sold prices if possible.`
         }]
       })
     });
@@ -124,17 +124,17 @@ app.post('/comp', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 512,
+        max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Based on this web search about "${cardDesc}" card prices:
+          content: `Here is data about recent sales for "${cardDesc}":
 
-${searchText.substring(0, 3000)}
+${searchText.substring(0, 4000)}
 
-Extract any dollar amounts that represent sale prices. Return ONLY this JSON:
-{"sales":[{"price":150.00,"date":"2025","title":"${cardDesc}"}],"suggestedComp":150.00}
+Extract up to 3 recent sold prices with dates. If you find prices, use them. If not, provide a realistic market estimate based on the card.
 
-If no prices found, estimate based on the card description.`
+Return ONLY this JSON with no other text:
+{"sales":[{"price":150.00,"date":"May 2025","title":"listing title"},{"price":140.00,"date":"Apr 2025","title":"listing title"}],"suggestedComp":145.00}`
         }]
       })
     });
