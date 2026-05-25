@@ -109,13 +109,14 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search for recent sold prices for: "${cardDesc}". Look for actual eBay sales from 2025 or 2026.`
+          content: `Search 130point.com for "${player} ${cardNumber || ''} ${brand} ${year} ${gradeClean}" and find the actual sold prices listed on that page.`
         }]
       })
     });
 
     const step1Data = await step1.json();
     const searchText = step1Data.error ? '' : extractAllText(step1Data.content);
+    console.log('Search result:', searchText.substring(0, 500));
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -129,19 +130,21 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `I need recent eBay comp values for this sports card: ${cardDesc}
+          content: `I need accurate current eBay sold prices for: ${cardDesc}
 
-Search data found: ${searchText.substring(0, 2000) || 'No search data available'}
+Web search results: ${searchText.substring(0, 2000)}
 
-Today is ${currentMonth} ${currentYear}. Based on the search data above AND your knowledge of current sports card market values, provide 3 realistic recent sold prices for this SPECIFIC card.
+Today is ${currentMonth} ${currentYear}.
 
-Important: 
-- Use realistic current market prices (not inflated old prices)
-- All dates must be real months like "May 2026" or "Mar 2026"
-- The suggestedComp should be the average
+CRITICAL RULES:
+- Use ONLY prices found in the search results above if they are available
+- If search results have prices, use those exact prices and dates
+- If no search results, use your best estimate but note these are ESTIMATES
+- For a ${year} ${brand} base rookie card graded ${gradeClean}, current market is typically $30-80 range unless it's a star player
+- Do NOT use inflated old prices from 2021-2022 era
 
-Return ONLY this JSON with no other text:
-{"sales":[{"price":65.00,"date":"May 2026","title":"${cardDesc}"},{"price":58.00,"date":"Apr 2026","title":"${cardDesc}"},{"price":55.00,"date":"Mar 2026","title":"${cardDesc}"}],"suggestedComp":59.33}`
+Return ONLY this JSON:
+{"sales":[{"price":44.99,"date":"May 2026","title":"${cardDesc}"},{"price":35.55,"date":"May 2026","title":"${cardDesc}"},{"price":36.00,"date":"May 2026","title":"${cardDesc}"}],"suggestedComp":38.85}`
         }]
       })
     });
