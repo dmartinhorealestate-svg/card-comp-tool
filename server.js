@@ -88,36 +88,22 @@ No markdown, no extra text, only JSON.` }
   }
 });
 
-async function getEbayToken() {
-  const credentials = Buffer.from(`${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`).toString('base64');
-  const response = await fetch('https://api.ebay.com/identity/v1/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials&scope=https://api.ebay.com/oauth/api_scope'
-  });
-  const data = await response.json();
-  return data.access_token;
-}
-
 async function searchEbaySold(query) {
   try {
-    const token = await getEbayToken();
     const encoded = encodeURIComponent(query);
-    const response = await fetch(
-      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encoded}&filter=buyingOptions:{FIXED_PRICE},conditions:{PRE_OWNED}&sort=endingSoonest&limit=5`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-          'Content-Type': 'application/json',
-        }
-      }
-    );
+    const url = `https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findCompletedItems&SERVICE-VERSION=1.0.0&SECURITY-APPNAME=${process.env.EBAY_APP_ID}&RESPONSE-DATA-FORMAT=JSON&keywords=${encoded}&itemFilter(0).name=SoldItemsOnly&itemFilter(0).value=true&sortOrder=EndTimeSoonest&paginationInput.entriesPerPage=5`;
+    
+    const response = await fetch(url);
     const data = await response.json();
-    return data.itemSummaries || [];
+    
+    const items = data?.findCompletedItemsResponse?.[0]?.searchResult?.[0]?.item || [];
+    console.log('eBay sold items found:', items.length);
+    
+    return items.map(item => ({
+      title: item.title?.[0],
+      price: item.sellingStatus?.[0]?.currentPrice?.[0]?.__value__,
+      date: item.listingInfo?.[0]?.endTime?.[0]
+    }));
   } catch (err) {
     console.error('eBay search error:', err);
     return [];
@@ -138,10 +124,13 @@ app.post('/comp', async (req, res) => {
 
     let ebayText = '';
     if (ebayItems.length > 0) {
-      ebayText = ebayItems.map(item => `${item.title}: $${item.price?.value} (${item.condition})`).join('\n');
+      ebayText = ebayItems.map(item => {
+        const date = item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Recent';
+        return `${item.title}: $${parseFloat(item.price).toFixed(2)} sold ${date}`;
+      }).join('\n');
     }
 
-    console.log('eBay results:', ebayText);
+    console.log('eBay sold results:', ebayText);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -158,13 +147,13 @@ app.post('/comp', async (req, res) => {
           content: `I need comp values for: ${cardDesc}
 Today: ${currentMonth} ${currentYear}
 
-eBay listings found:
-${ebayText || 'No eBay results found'}
+eBay SOLD listings:
+${ebayText || 'No sold listings found'}
 
-Based on the eBay listings above, give me 3 realistic recent sold prices. Use the actual prices from eBay if available. If not available, estimate current market value for ${currentYear}.
+Use the actual sold prices above. If no sold listings, estimate current ${currentYear} market value.
 
 Return ONLY this JSON:
-{"sales":[{"price":PRICE1,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"},{"price":PRICE2,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"},{"price":PRICE3,"date":"${currentMonth} ${currentYear}","title":"${cardDesc}"}],"suggestedComp":AVERAGE}`
+{"sales":[{"price":PRICE1,"date":"DATE1","title":"TITLE1"},{"price":PRICE2,"date":"DATE2","title":"TITLE2"},{"price":PRICE3,"date":"DATE3","title":"TITLE3"}],"suggestedComp":AVERAGE}`
         }]
       })
     });
