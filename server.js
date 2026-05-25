@@ -91,6 +91,7 @@ app.post('/comp', async (req, res) => {
   try {
     const { player, year, brand, cardNumber, variation, grade, rookie } = req.body;
     const cardDesc = `${year} ${brand} ${player} ${variation || ''} ${rookie ? 'Rookie' : ''} ${grade || 'Raw'}`.trim();
+    const currentYear = new Date().getFullYear();
 
     const step1 = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -105,14 +106,13 @@ app.post('/comp', async (req, res) => {
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{
           role: 'user',
-          content: `Search for recent sold prices for this sports card: "${cardDesc}". Search 130point.com and psacard.com for recent sales data. Find at least 3 recent sold prices if possible.`
+          content: `Search 130point.com for "${player} ${grade} ${year} ${brand}" sold prices in ${currentYear}. Find the most recent actual sale prices.`
         }]
       })
     });
 
     const step1Data = await step1.json();
     if (step1Data.error) return res.status(500).json({ error: step1Data.error.message });
-
     const searchText = extractAllText(step1Data.content);
 
     const step2 = await fetch('https://api.anthropic.com/v1/messages', {
@@ -127,14 +127,14 @@ app.post('/comp', async (req, res) => {
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Here is data about recent sales for "${cardDesc}":
+          content: `Here is sales data for "${cardDesc}":
 
 ${searchText.substring(0, 4000)}
 
-Extract up to 3 recent sold prices with dates. If you find prices, use them. If not, provide a realistic market estimate based on the card.
+This is a ${grade} graded ${year} ${brand} ${player} card. Based ONLY on the actual sale prices in the data above, give me recent comps. The prices should be realistic for this specific card in ${currentYear}.
 
-Return ONLY this JSON with no other text:
-{"sales":[{"price":150.00,"date":"May 2025","title":"listing title"},{"price":140.00,"date":"Apr 2025","title":"listing title"}],"suggestedComp":145.00}`
+Return ONLY this JSON:
+{"sales":[{"price":75.00,"date":"May 2026","title":"${cardDesc}"},{"price":70.00,"date":"Apr 2026","title":"${cardDesc}"}],"suggestedComp":72.00}`
         }]
       })
     });
