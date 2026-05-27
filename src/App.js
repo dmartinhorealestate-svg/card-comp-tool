@@ -60,7 +60,7 @@ function App() {
       const parsed = await response.json();
       if (parsed.error) throw new Error(parsed.error);
       setCardData(parsed);
-      setEditData({ ...parsed, rookie: false, grade: 'Raw', tags: parsed.tags || [] });
+      setEditData({ ...parsed, grade: 'Raw', tags: parsed.tags || [], printRun: parsed.printRun || '' });
     } catch (err) {
       setCardData({ error: 'Could not parse card data. Try again.' });
     }
@@ -169,7 +169,8 @@ function App() {
           <h3>Session Cards:</h3>
           {cards.map((c, i) => (
             <div key={i} style={{ padding: '10px', background: '#f0f9f0', borderRadius: '6px', marginBottom: '8px' }}>
-              <strong>Card {i + 1}:</strong> {c.player} {c.year} {c.grade} {c.rookie ? '⭐ RC' : ''} - ${c.compValue.toFixed(2)}
+              <strong>Card {i + 1}:</strong> {c.player} {c.year} {c.grade} - ${c.compValue.toFixed(2)}
+              {c.printRun && <span style={{ marginLeft: '6px', color: '#9C27B0', fontWeight: 'bold' }}>#{c.printRun}</span>}
               {c.tags && c.tags.length > 0 && (
                 <div style={{ marginTop: '4px' }}>
                   {c.tags.map(tag => (
@@ -231,6 +232,17 @@ function App() {
             </div>
           ))}
 
+          <div style={{ marginBottom: '10px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Print Run (if numbered, e.g. 1/5):</label>
+            <input
+              type="text"
+              value={editData.printRun || ''}
+              onChange={e => handleEditChange('printRun', e.target.value)}
+              placeholder="e.g. 1/5 or 45/99"
+              style={{ width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
+            />
+          </div>
+
           <div style={{ marginBottom: '12px' }}>
             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Grade:</label>
             <select value={editData.grade || 'Raw'} onChange={e => handleEditChange('grade', e.target.value)}
@@ -269,7 +281,6 @@ function App() {
 
       {confirmed && compResult && compResult.cardLadderUrl && (
         <div style={{ marginTop: '20px', padding: '15px', background: '#f3e5f5', borderRadius: '8px' }}>
-
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Search Text:</label>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <div style={{ flex: 1, padding: '10px', background: 'white', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px', wordBreak: 'break-all' }}>

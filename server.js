@@ -58,8 +58,9 @@ app.post('/analyze', async (req, res) => {
 - player (string)
 - year (string)
 - brand (string)
-- cardNumber (string)
+- cardNumber (string or empty string "" if not visible on the card)
 - variation (string)
+- printRun (string - ONLY if there is a print run number like "1/5" or "45/99" visible on the card, otherwise empty string "")
 - tags (array of strings from this list only): 
   "Auto" (if autograph present),
   "RPA" (if rookie patch auto),
@@ -72,6 +73,9 @@ app.post('/analyze', async (req, res) => {
   "Elite" (if elite level player),
   "Superstar" (if superstar player),
   "Breakout" (if breakout/rising player)
+
+Important: cardNumber is the card's catalog number like #304. printRun is the limited edition number like 1/5 or 45/99. These are different fields.
+If cardNumber is not clearly visible, use empty string "".
 No markdown, no extra text, only JSON.` }
           ]
         }]
@@ -89,7 +93,7 @@ No markdown, no extra text, only JSON.` }
 
 app.post('/comp', async (req, res) => {
   try {
-    const { player, year, brand, cardNumber, variation, grade } = req.body;
+    const { player, year, brand, cardNumber, variation, grade, printRun } = req.body;
     
     const parts = [
       player,
@@ -97,6 +101,7 @@ app.post('/comp', async (req, res) => {
       brand,
       cardNumber ? `#${cardNumber}` : null,
       variation || null,
+      printRun ? `${printRun}` : null,
       grade && grade !== 'Raw' ? grade : null
     ].filter(Boolean);
 
