@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 function App() {
+  const [queue, setQueue] = useState([]);
+  const [queueIndex, setQueueIndex] = useState(0);
   const [imageBase64, setImageBase64] = useState(null);
   const [imageURL, setImageURL] = useState(null);
   const [cardData, setCardData] = useState(null);
@@ -28,20 +30,26 @@ function App() {
       .catch(() => {});
   }, []);
 
+  function loadImageFromFile(file) {
+    const url = URL.createObjectURL(file);
+    setImageURL(url);
+    setCardData(null);
+    setEditData(null);
+    setConfirmed(false);
+    setCompResult(null);
+    setCompValue('');
+    setCopied(false);
+    const reader = new FileReader();
+    reader.onload = () => setImageBase64(reader.result.split(',')[1]);
+    reader.readAsDataURL(file);
+  }
+
   function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (file) {
-      setImageURL(URL.createObjectURL(file));
-      setCardData(null);
-      setEditData(null);
-      setConfirmed(false);
-      setCompResult(null);
-      setCompValue('');
-      setCopied(false);
-      const reader = new FileReader();
-      reader.onload = () => setImageBase64(reader.result.split(',')[1]);
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setQueue(files);
+    setQueueIndex(0);
+    loadImageFromFile(files[0]);
   }
 
   async function analyzeCard() {
@@ -121,16 +129,23 @@ function App() {
       setCards(data.cards);
       setTotal(data.cards.reduce((sum, c) => sum + c.compValue, 0));
     }
-    setConfirmed(false);
-    setCardData(null);
-    setEditData(null);
-    setImageURL(null);
-    setImageBase64(null);
-    setCompResult(null);
-    setCompValue('');
-    setCopied(false);
-    setShowOffer(false);
-    setOfferData(null);
+
+    const nextIndex = queueIndex + 1;
+    if (nextIndex < queue.length) {
+      setQueueIndex(nextIndex);
+      loadImageFromFile(queue[nextIndex]);
+    } else {
+      setQueue([]);
+      setQueueIndex(0);
+      setConfirmed(false);
+      setCardData(null);
+      setEditData(null);
+      setImageURL(null);
+      setImageBase64(null);
+      setCompResult(null);
+      setCompValue('');
+      setCopied(false);
+    }
   }
 
   async function clearSession() {
@@ -168,14 +183,8 @@ function App() {
       backgroundColor: '#0a0a0a',
       color: 'white',
     },
-    header: {
-      textAlign: 'center',
-      marginBottom: '20px',
-    },
-    logo: {
-      width: '180px',
-      marginBottom: '10px',
-    },
+    header: { textAlign: 'center', marginBottom: '20px' },
+    logo: { width: '180px', marginBottom: '10px' },
     totalBar: {
       background: '#1a1a1a',
       border: '1px solid #FF6B00',
@@ -187,89 +196,17 @@ function App() {
       fontSize: '16px',
     },
     orangeText: { color: '#FF6B00', fontWeight: 'bold' },
-    card: {
-      padding: '10px',
-      background: '#1a1a1a',
-      border: '1px solid #333',
-      borderRadius: '6px',
-      marginBottom: '8px',
-    },
-    tag: {
-      background: '#FF6B00',
-      color: 'white',
-      borderRadius: '4px',
-      padding: '2px 6px',
-      fontSize: '12px',
-      marginRight: '4px',
-    },
-    btnOrange: {
-      padding: '10px 20px',
-      background: '#FF6B00',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '16px',
-      cursor: 'pointer',
-    },
-    btnRed: {
-      padding: '10px 20px',
-      background: '#c0392b',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '16px',
-      cursor: 'pointer',
-    },
-    btnBlue: {
-      padding: '10px 20px',
-      background: '#1565C0',
-      color: 'white',
-      border: 'none',
-      borderRadius: '6px',
-      fontSize: '16px',
-      cursor: 'pointer',
-    },
-    section: {
-      background: '#1a1a1a',
-      border: '1px solid #333',
-      borderRadius: '8px',
-      padding: '15px',
-      marginTop: '20px',
-    },
-    label: {
-      display: 'block',
-      fontWeight: 'bold',
-      marginBottom: '4px',
-      color: '#FF6B00',
-      textTransform: 'capitalize',
-    },
-    input: {
-      width: '100%',
-      padding: '8px',
-      fontSize: '16px',
-      borderRadius: '6px',
-      border: '1px solid #444',
-      boxSizing: 'border-box',
-      background: '#0a0a0a',
-      color: 'white',
-    },
-    select: {
-      width: '100%',
-      padding: '8px',
-      fontSize: '16px',
-      borderRadius: '6px',
-      border: '1px solid #444',
-      background: '#0a0a0a',
-      color: 'white',
-    },
-    offerBox: {
-      padding: '20px',
-      background: '#1a1a1a',
-      border: '2px solid #FF6B00',
-      borderRadius: '8px',
-      marginBottom: '20px',
-      color: 'white',
-    },
+    card: { padding: '10px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', marginBottom: '8px' },
+    tag: { background: '#FF6B00', color: 'white', borderRadius: '4px', padding: '2px 6px', fontSize: '12px', marginRight: '4px' },
+    btnOrange: { padding: '10px 20px', background: '#FF6B00', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
+    btnRed: { padding: '10px 20px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
+    btnBlue: { padding: '10px 20px', background: '#1565C0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
+    section: { background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', padding: '15px', marginTop: '20px' },
+    label: { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#FF6B00', textTransform: 'capitalize' },
+    input: { width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #444', boxSizing: 'border-box', background: '#0a0a0a', color: 'white' },
+    select: { width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #444', background: '#0a0a0a', color: 'white' },
+    offerBox: { padding: '20px', background: '#1a1a1a', border: '2px solid #FF6B00', borderRadius: '8px', marginBottom: '20px', color: 'white' },
+    queueBar: { background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '8px', padding: '10px 16px', marginBottom: '16px', textAlign: 'center', color: '#FF6B00', fontWeight: 'bold', fontSize: '16px' },
   };
 
   return (
@@ -315,8 +252,14 @@ function App() {
       )}
 
       <div style={styles.section}>
-        <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Upload a Card</h2>
-        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ color: 'white' }} />
+        <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Upload Cards</h2>
+        <input type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ color: 'white' }} />
+
+        {queue.length > 1 && (
+          <div style={styles.queueBar}>
+            Card {queueIndex + 1} of {queue.length}
+          </div>
+        )}
 
         {imageURL && (
           <div>
@@ -403,7 +346,9 @@ function App() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <input type="number" placeholder="Enter $ value" value={compValue} onChange={e => setCompValue(e.target.value)}
               style={{ ...styles.input, flex: 1 }} />
-            <button onClick={addToTotal} style={styles.btnBlue}>Add to Total</button>
+            <button onClick={addToTotal} style={styles.btnBlue}>
+              {queue.length > 1 && queueIndex < queue.length - 1 ? 'Add & Next Card' : 'Add to Total'}
+            </button>
           </div>
         </div>
       )}
