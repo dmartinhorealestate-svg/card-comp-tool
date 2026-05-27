@@ -158,41 +158,154 @@ function App() {
   const grades = ['Raw', 'PSA 7', 'PSA 8', 'PSA 9', 'PSA 10', 'BGS 9', 'BGS 9.5', 'BGS 10'];
   const allTags = ['Auto', 'RPA', 'Numbered', 'Case Hit', 'Parallel', 'Rookie', 'GOAT', 'HOF', 'Elite', 'Superstar', 'Breakout'];
 
+  const styles = {
+    app: {
+      fontFamily: 'sans-serif',
+      maxWidth: '600px',
+      margin: '0 auto',
+      padding: '20px',
+      minHeight: '100vh',
+      backgroundColor: '#0a0a0a',
+      color: 'white',
+    },
+    header: {
+      textAlign: 'center',
+      marginBottom: '20px',
+    },
+    logo: {
+      width: '180px',
+      marginBottom: '10px',
+    },
+    totalBar: {
+      background: '#1a1a1a',
+      border: '1px solid #FF6B00',
+      borderRadius: '8px',
+      padding: '12px 16px',
+      marginBottom: '20px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: '16px',
+    },
+    orangeText: { color: '#FF6B00', fontWeight: 'bold' },
+    card: {
+      padding: '10px',
+      background: '#1a1a1a',
+      border: '1px solid #333',
+      borderRadius: '6px',
+      marginBottom: '8px',
+    },
+    tag: {
+      background: '#FF6B00',
+      color: 'white',
+      borderRadius: '4px',
+      padding: '2px 6px',
+      fontSize: '12px',
+      marginRight: '4px',
+    },
+    btnOrange: {
+      padding: '10px 20px',
+      background: '#FF6B00',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '16px',
+      cursor: 'pointer',
+    },
+    btnRed: {
+      padding: '10px 20px',
+      background: '#c0392b',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '16px',
+      cursor: 'pointer',
+    },
+    btnBlue: {
+      padding: '10px 20px',
+      background: '#1565C0',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '16px',
+      cursor: 'pointer',
+    },
+    section: {
+      background: '#1a1a1a',
+      border: '1px solid #333',
+      borderRadius: '8px',
+      padding: '15px',
+      marginTop: '20px',
+    },
+    label: {
+      display: 'block',
+      fontWeight: 'bold',
+      marginBottom: '4px',
+      color: '#FF6B00',
+      textTransform: 'capitalize',
+    },
+    input: {
+      width: '100%',
+      padding: '8px',
+      fontSize: '16px',
+      borderRadius: '6px',
+      border: '1px solid #444',
+      boxSizing: 'border-box',
+      background: '#0a0a0a',
+      color: 'white',
+    },
+    select: {
+      width: '100%',
+      padding: '8px',
+      fontSize: '16px',
+      borderRadius: '6px',
+      border: '1px solid #444',
+      background: '#0a0a0a',
+      color: 'white',
+    },
+    offerBox: {
+      padding: '20px',
+      background: '#1a1a1a',
+      border: '2px solid #FF6B00',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      color: 'white',
+    },
+  };
+
   return (
-    <div style={{ fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto', padding: '20px' }}>
-      <h1>Card Comp Tool</h1>
-      <p>Cards logged: {cards.length} | Running Total: ${total.toFixed(2)}</p>
-      <hr />
+    <div style={styles.app}>
+      <div style={styles.header}>
+        <img src="/logo.jpg" alt="CM Collectibles" style={styles.logo} />
+      </div>
+
+      <div style={styles.totalBar}>
+        <span>Cards: <span style={styles.orangeText}>{cards.length}</span></span>
+        <span>Total: <span style={styles.orangeText}>${total.toFixed(2)}</span></span>
+      </div>
 
       {cards.length > 0 && (
         <div>
-          <h3>Session Cards:</h3>
+          <h3 style={{ color: '#FF6B00' }}>Session Cards:</h3>
           {cards.map((c, i) => (
-            <div key={i} style={{ padding: '10px', background: '#f0f9f0', borderRadius: '6px', marginBottom: '8px' }}>
-              <strong>Card {i + 1}:</strong> {c.player} {c.year} {c.grade} - ${c.compValue.toFixed(2)}
-              {c.printRun && <span style={{ marginLeft: '6px', color: '#9C27B0', fontWeight: 'bold' }}>#{c.printRun}</span>}
+            <div key={i} style={styles.card}>
+              <strong>{c.player}</strong> {c.year} {c.grade} — <span style={styles.orangeText}>${c.compValue.toFixed(2)}</span>
+              {c.printRun && <span style={{ marginLeft: '6px', color: '#FF6B00' }}>#{c.printRun}</span>}
               {c.tags && c.tags.length > 0 && (
                 <div style={{ marginTop: '4px' }}>
-                  {c.tags.map(tag => (
-                    <span key={tag} style={{ background: '#9C27B0', color: 'white', borderRadius: '4px', padding: '2px 6px', fontSize: '12px', marginRight: '4px' }}>{tag}</span>
-                  ))}
+                  {c.tags.map(tag => <span key={tag} style={styles.tag}>{tag}</span>)}
                 </div>
               )}
             </div>
           ))}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <button onClick={clearSession} style={{ padding: '10px 20px', background: '#e74c3c', color: 'white', border: 'none', borderRadius: '6px' }}>
-              Clear Session
-            </button>
-            <button onClick={calculateOffer} style={{ padding: '10px 20px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '6px' }}>
-              Calculate Offer
-            </button>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '10px' }}>
+            <button onClick={clearSession} style={styles.btnRed}>Clear Session</button>
+            <button onClick={calculateOffer} style={styles.btnOrange}>Calculate Offer</button>
           </div>
 
           {showOffer && offerData && (
-            <div style={{ padding: '20px', background: '#1a1a2e', borderRadius: '8px', marginBottom: '20px', color: 'white' }}>
-              <h3 style={{ marginTop: 0 }}>Collection Offer</h3>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '22px', background: '#9C27B0', padding: '12px', borderRadius: '6px' }}>
+            <div style={styles.offerBox}>
+              <h3 style={{ marginTop: 0, color: '#FF6B00' }}>Collection Offer</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '24px', background: '#FF6B00', padding: '12px', borderRadius: '6px' }}>
                 <span>Offer Price:</span>
                 <strong>${offerData.offerPrice.toFixed(2)}</strong>
               </div>
@@ -201,77 +314,66 @@ function App() {
         </div>
       )}
 
-      <h2>Upload a Card</h2>
-      <input type="file" accept="image/*" onChange={handleImageUpload} />
+      <div style={styles.section}>
+        <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Upload a Card</h2>
+        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ color: 'white' }} />
 
-      {imageURL && (
-        <div>
-          <img src={imageURL} alt="card" style={{ maxWidth: '100%', marginTop: '10px', borderRadius: '8px' }} />
-          {!cardData && (
-            <button onClick={analyzeCard} disabled={loading} style={{ marginTop: '10px', padding: '10px 20px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px' }}>
-              {loading ? 'Analyzing...' : 'Analyze Card'}
-            </button>
-          )}
-        </div>
-      )}
+        {imageURL && (
+          <div>
+            <img src={imageURL} alt="card" style={{ maxWidth: '100%', marginTop: '10px', borderRadius: '8px' }} />
+            {!cardData && (
+              <button onClick={analyzeCard} disabled={loading} style={{ ...styles.btnOrange, marginTop: '10px', width: '100%' }}>
+                {loading ? 'Analyzing...' : 'Analyze Card'}
+              </button>
+            )}
+          </div>
+        )}
 
-      {cardData && cardData.error && <p style={{ color: 'red' }}>{cardData.error}</p>}
+        {cardData && cardData.error && <p style={{ color: 'red' }}>{cardData.error}</p>}
+      </div>
 
-      {editData && !confirmed && !cardData.error && (
-        <div style={{ marginTop: '20px', padding: '15px', background: '#f5f5f5', borderRadius: '8px' }}>
-          <h3>Edit Card Details:</h3>
+      {editData && !confirmed && !cardData?.error && (
+        <div style={styles.section}>
+          <h3 style={{ color: '#FF6B00', marginTop: 0 }}>Edit Card Details:</h3>
           {fields.map(field => (
             <div key={field} style={{ marginBottom: '10px' }}>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', textTransform: 'capitalize' }}>{field}:</label>
-              <input
-                type="text"
-                value={editData[field] || ''}
-                onChange={e => handleEditChange(field, e.target.value)}
-                style={{ width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-              />
+              <label style={styles.label}>{field}:</label>
+              <input type="text" value={editData[field] || ''} onChange={e => handleEditChange(field, e.target.value)} style={styles.input} />
             </div>
           ))}
 
           <div style={{ marginBottom: '10px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Print Run (if numbered, e.g. 1/5):</label>
-            <input
-              type="text"
-              value={editData.printRun || ''}
-              onChange={e => handleEditChange('printRun', e.target.value)}
-              placeholder="e.g. 1/5 or 45/99"
-              style={{ width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-            />
+            <label style={styles.label}>Print Run (if numbered, e.g. 1/5):</label>
+            <input type="text" value={editData.printRun || ''} onChange={e => handleEditChange('printRun', e.target.value)} placeholder="e.g. 1/5 or 45/99" style={styles.input} />
           </div>
 
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Grade:</label>
-            <select value={editData.grade || 'Raw'} onChange={e => handleEditChange('grade', e.target.value)}
-              style={{ width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #ccc' }}>
+            <label style={styles.label}>Grade:</label>
+            <select value={editData.grade || 'Raw'} onChange={e => handleEditChange('grade', e.target.value)} style={styles.select}>
               {grades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>Tags:</label>
+            <label style={styles.label}>Tags:</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {allTags.map(tag => (
                 <button key={tag} onClick={() => toggleTag(tag)}
-                  style={{ padding: '6px 12px', background: (editData.tags || []).includes(tag) ? '#9C27B0' : '#ddd', color: (editData.tags || []).includes(tag) ? 'white' : '#333', border: 'none', borderRadius: '20px', fontSize: '14px', cursor: 'pointer' }}>
+                  style={{ padding: '6px 12px', background: (editData.tags || []).includes(tag) ? '#FF6B00' : '#333', color: 'white', border: 'none', borderRadius: '20px', fontSize: '14px', cursor: 'pointer' }}>
                   {tag}
                 </button>
               ))}
             </div>
             {editData.grade && editData.grade !== 'Raw' && (
-              <p style={{ fontSize: '13px', color: '#666', marginTop: '6px' }}>+ Graded tag auto-applied</p>
+              <p style={{ fontSize: '13px', color: '#aaa', marginTop: '6px' }}>+ Graded tag auto-applied</p>
             )}
-            <p style={{ fontSize: '13px', color: '#9C27B0', marginTop: '4px' }}>
+            <p style={{ fontSize: '13px', color: '#FF6B00', marginTop: '4px' }}>
               Total tags: {(editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)}
               {((editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)) >= 4 ? ' → 85% offer' : ' → 70% offer'}
             </p>
           </div>
 
-          <button onClick={getComps} disabled={compLoading}
-            style={{ padding: '12px 24px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', width: '100%' }}>
+          <button onClick={getComps} disabled={compLoading} style={{ ...styles.btnOrange, width: '100%', padding: '14px' }}>
             {compLoading ? 'Loading...' : '🔍 Get Comps'}
           </button>
 
@@ -280,32 +382,28 @@ function App() {
       )}
 
       {confirmed && compResult && compResult.cardLadderUrl && (
-        <div style={{ marginTop: '20px', padding: '15px', background: '#f3e5f5', borderRadius: '8px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Search Text:</label>
+        <div style={styles.section}>
+          <label style={styles.label}>Search Text:</label>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <div style={{ flex: 1, padding: '10px', background: 'white', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px', wordBreak: 'break-all' }}>
+            <div style={{ flex: 1, padding: '10px', background: '#0a0a0a', borderRadius: '6px', border: '1px solid #444', fontSize: '14px', wordBreak: 'break-all', color: 'white' }}>
               {compResult.searchQuery}
             </div>
             <button onClick={copySearchText}
-              style={{ padding: '10px 16px', background: copied ? '#4CAF50' : '#555', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', whiteSpace: 'nowrap' }}>
+              style={{ padding: '10px 16px', background: copied ? '#4CAF50' : '#555', color: 'white', border: 'none', borderRadius: '6px', fontSize: '14px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
               {copied ? '✓ Copied!' : 'Copy'}
             </button>
           </div>
 
           <a href={compResult.cardLadderUrl} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'block', padding: '14px', background: '#1a1a2e', color: 'white', borderRadius: '6px', textAlign: 'center', fontSize: '18px', textDecoration: 'none', marginBottom: '16px' }}>
+            style={{ display: 'block', padding: '14px', background: '#FF6B00', color: 'white', borderRadius: '6px', textAlign: 'center', fontSize: '18px', textDecoration: 'none', marginBottom: '16px', fontWeight: 'bold' }}>
             📊 Open Card Ladder
           </a>
 
-          <h3>Enter Comp Value:</h3>
+          <h3 style={{ color: '#FF6B00' }}>Enter Comp Value:</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input type="number" placeholder="Enter $ value" value={compValue}
-              onChange={e => setCompValue(e.target.value)}
-              style={{ padding: '10px', fontSize: '16px', flex: 1, borderRadius: '6px', border: '1px solid #ccc' }} />
-            <button onClick={addToTotal}
-              style={{ padding: '10px 20px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px' }}>
-              Add to Total
-            </button>
+            <input type="number" placeholder="Enter $ value" value={compValue} onChange={e => setCompValue(e.target.value)}
+              style={{ ...styles.input, flex: 1 }} />
+            <button onClick={addToTotal} style={styles.btnBlue}>Add to Total</button>
           </div>
         </div>
       )}
