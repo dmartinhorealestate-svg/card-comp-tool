@@ -30,6 +30,11 @@ function App() {
   const [sessionNameInput, setSessionNameInput] = useState('');
   const [showNewSessionModal, setShowNewSessionModal] = useState(false);
   const [newSessionNameInput, setNewSessionNameInput] = useState('');
+  const [lowPct, setLowPct] = useState(70);
+  const [highPct, setHighPct] = useState(85);
+  const [showSettings, setShowSettings] = useState(false);
+  const [lowPctInput, setLowPctInput] = useState('70');
+  const [highPctInput, setHighPctInput] = useState('85');
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cm_unlocked');
@@ -46,6 +51,8 @@ function App() {
           setTotal(data.cards.reduce((sum, c) => sum + c.compValue, 0));
         }
         if (data.sessionName !== undefined) setSessionName(data.sessionName);
+        if (data.lowPct !== undefined) { setLowPct(data.lowPct); setLowPctInput(String(data.lowPct)); }
+        if (data.highPct !== undefined) { setHighPct(data.highPct); setHighPctInput(String(data.highPct)); }
       })
       .catch(() => {});
   }, [unlocked]);
@@ -59,6 +66,22 @@ function App() {
       setPasswordError(true);
       setPasswordInput('');
     }
+  }
+
+  async function savePercentages() {
+    const low = parseFloat(lowPctInput);
+    const high = parseFloat(highPctInput);
+    if (isNaN(low) || isNaN(high)) return;
+    await fetch('/percentages', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
+      body: JSON.stringify({ lowPct: low, highPct: high }),
+    });
+    setLowPct(low);
+    setHighPct(high);
+    setShowSettings(false);
+    setShowOffer(false);
+    setOfferData(null);
   }
 
   async function saveSessionName(name) {
@@ -286,7 +309,7 @@ function App() {
     let offerTotal = 0;
     cards.forEach(card => {
       const tagCount = (card.tags || []).length + (card.grade && card.grade !== 'Raw' ? 1 : 0);
-      const pct = tagCount >= 4 ? 0.85 : 0.70;
+      const pct = tagCount >= 4 ? highPct / 100 : lowPct / 100;
       offerTotal += card.compValue * pct;
     });
     setOfferData({ offerPrice: Math.round(offerTotal * 100) / 100 });
@@ -384,8 +407,52 @@ function App() {
         </div>
       )}
 
+      {showSettings && (
+        <div style={styles.modal}>
+          <div style={styles.modalBox}>
+            <h3 style={{ color: '#FF6B00', marginTop: 0 }}>⚙️ Offer Settings</h3>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Set your offer percentages. 4+ tags uses the high rate, 3 or fewer uses the low rate.</p>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>Low rate (3 or fewer tags):</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  value={lowPctInput}
+                  onChange={e => setLowPctInput(e.target.value)}
+                  inputMode="decimal"
+                  style={{ ...styles.input, flex: 1 }}
+                />
+                <span style={{ color: '#FF6B00', fontWeight: 'bold' }}>%</span>
+              </div>
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>High rate (4+ tags):</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="number"
+                  value={highPctInput}
+                  onChange={e => setHighPctInput(e.target.value)}
+                  inputMode="decimal"
+                  style={{ ...styles.input, flex: 1 }}
+                />
+                <span style={{ color: '#FF6B00', fontWeight: 'bold' }}>%</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={savePercentages} style={{ ...styles.btnOrange, flex: 1 }}>Save</button>
+              <button onClick={() => setShowSettings(false)} style={{ ...styles.btnGray, flex: 1 }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={styles.header}>
         <img src="/logo.jpg" alt="CM Collectibles" style={styles.logo} />
+      </div>
+
+      <div style={{ textAlign: 'right', marginBottom: '8px' }}>
+        <button onClick={() => { setShowSettings(true); setLowPctInput(String(lowPct)); setHighPctInput(String(highPct)); }}
+          style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '22px', cursor: 'pointer' }}>⚙️</button>
       </div>
 
       {sessionName ? (
@@ -423,6 +490,10 @@ function App() {
       <div style={styles.totalBar}>
         <span>Cards: <span style={styles.orangeText}>{cards.length}</span></span>
         <span>Total: <span style={styles.orangeText}>${total.toFixed(2)}</span></span>
+      </div>
+
+      <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '13px', color: '#aaa' }}>
+        Offer rates: <span style={{ color: '#FF6B00' }}>{lowPct}%</span> / <span style={{ color: '#FF6B00' }}>{highPct}%</span>
       </div>
 
       {cards.length > 0 && (
@@ -473,6 +544,9 @@ function App() {
           {showOffer && offerData && (
             <div style={styles.offerBox}>
               <h3 style={{ marginTop: 0, color: '#FF6B00' }}>Collection Offer</h3>
+              <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '8px' }}>
+                Rates: {lowPct}% (low) / {highPct}% (high)
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '24px', background: '#FF6B00', padding: '12px', borderRadius: '6px' }}>
                 <span>Offer Price:</span>
                 <strong>${offerData.offerPrice.toFixed(2)}</strong>
@@ -547,7 +621,7 @@ function App() {
             )}
             <p style={{ fontSize: '13px', color: '#FF6B00', marginTop: '4px' }}>
               Total tags: {(editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)}
-              {((editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)) >= 4 ? ' → 85% offer' : ' → 70% offer'}
+              {((editData.tags || []).length + (editData.grade && editData.grade !== 'Raw' ? 1 : 0)) >= 4 ? ' → ' + highPct + '% offer' : ' → ' + lowPct + '% offer'}
             </p>
           </div>
 
