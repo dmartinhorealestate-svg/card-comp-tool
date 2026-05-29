@@ -297,6 +297,10 @@ function App() {
     window.open('/print?pw=' + PASSWORD, '_blank');
   }
 
+  function exportCSV() {
+    window.open('/export-csv?pw=' + PASSWORD, '_blank');
+  }
+
   const fields = ['player', 'year', 'brand', 'cardNumber', 'variation'];
   const grades = ['Raw', 'PSA 7', 'PSA 8', 'PSA 9', 'PSA 10', 'BGS 9', 'BGS 9.5', 'BGS 10'];
   const allTags = ['Auto', 'RPA', 'Numbered', 'Case Hit', 'Parallel', 'Rookie', 'GOAT', 'HOF', 'Elite', 'Superstar', 'Breakout'];
@@ -453,7 +457,8 @@ function App() {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
             <button onClick={handleClearSession} style={styles.btnRed}>New Session</button>
             <button onClick={calculateOffer} style={styles.btnOrange}>Calculate Offer</button>
-            <button onClick={openPrintSheet} style={styles.btnGray}>🖨️ Print Sheet</button>
+            <button onClick={openPrintSheet} style={styles.btnGray}>🖨️ Print</button>
+            <button onClick={exportCSV} style={{ ...styles.btnGray, background: '#2e7d32' }}>📊 CSV</button>
           </div>
 
           {showOffer && offerData && (

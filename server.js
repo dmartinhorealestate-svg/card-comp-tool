@@ -132,6 +132,53 @@ app.get('/print', (req, res) => {
   res.send(html);
 });
 
+app.get('/export-csv', (req, res) => {
+  const pw = req.query.pw;
+  if (pw !== APP_PASSWORD) return res.status(401).send('Unauthorized');
+
+  const session = loadSession();
+  const cards = session.cards || [];
+  const sessionName = session.sessionName || 'Session';
+  const date = new Date().toLocaleDateString();
+
+  let csv = 'Session: ' + sessionName + '\n';
+  csv += 'Date: ' + date + '\n\n';
+  csv += '#,Player,Year,Brand,Grade,Card Number,Print Run,Tags,Comp Value,Buy Price,Sold For\n';
+
+  cards.forEach((c, i) => {
+    const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
+    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const buyPrice = (c.compValue * pct).toFixed(2);
+    const tags = c.tags && c.tags.length > 0 ? c.tags.join(' | ') : '';
+    csv += (i + 1) + ',';
+    csv += '"' + (c.player || '') + '",';
+    csv += '"' + (c.year || '') + '",';
+    csv += '"' + (c.brand || '') + '",';
+    csv += '"' + (c.grade || 'Raw') + '",';
+    csv += '"' + (c.cardNumber || '') + '",';
+    csv += '"' + (c.printRun || '') + '",';
+    csv += '"' + tags + '",';
+    csv += c.compValue.toFixed(2) + ',';
+    csv += buyPrice + ',';
+    csv += '\n';
+  });
+
+  const total = cards.reduce((sum, c) => sum + c.compValue, 0);
+  const buyTotal = cards.reduce((sum, c) => {
+    const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
+    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    return sum + c.compValue * pct;
+  }, 0);
+
+  csv += '\n,,,,,,,,Total Comp,Total Buy,\n';
+  csv += ',,,,,,,,' + total.toFixed(2) + ',' + buyTotal.toFixed(2) + ',\n';
+
+  const filename = sessionName.replace(/[^a-z0-9]/gi, '_') + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+  res.send(csv);
+});
+
 app.post('/analyze', async (req, res) => {
   try {
     const { imageBase64 } = req.body;
