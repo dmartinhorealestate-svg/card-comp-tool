@@ -30,6 +30,15 @@ function App() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (compResult && compResult.searchQuery) {
+      navigator.clipboard.writeText(compResult.searchQuery).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {});
+    }
+  }, [compResult]);
+
   async function analyzeImage(base64) {
     setLoading(true);
     setCardData(null);
