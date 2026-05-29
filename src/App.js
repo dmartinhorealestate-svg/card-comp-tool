@@ -221,6 +221,10 @@ function App() {
     setShowOffer(true);
   }
 
+  function openPrintSheet() {
+    window.open('/print', '_blank');
+  }
+
   const fields = ['player', 'year', 'brand', 'cardNumber', 'variation'];
   const grades = ['Raw', 'PSA 7', 'PSA 8', 'PSA 9', 'PSA 10', 'BGS 9', 'BGS 9.5', 'BGS 10'];
   const allTags = ['Auto', 'RPA', 'Numbered', 'Case Hit', 'Parallel', 'Rookie', 'GOAT', 'HOF', 'Elite', 'Superstar', 'Breakout'];
@@ -237,6 +241,7 @@ function App() {
     btnRed: { padding: '10px 20px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
     btnBlue: { padding: '10px 20px', background: '#1565C0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
     btnGreen: { padding: '6px 12px', background: '#2e7d32', color: 'white', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' },
+    btnGray: { padding: '10px 20px', background: '#444', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
     section: { background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', padding: '15px', marginTop: '20px' },
     label: { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#FF6B00', textTransform: 'capitalize' },
     input: { width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #444', boxSizing: 'border-box', background: '#0a0a0a', color: 'white' },
@@ -294,9 +299,10 @@ function App() {
               </div>
             </div>
           ))}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
             <button onClick={clearSession} style={styles.btnRed}>Clear Session</button>
             <button onClick={calculateOffer} style={styles.btnOrange}>Calculate Offer</button>
+            <button onClick={openPrintSheet} style={styles.btnGray}>🖨️ Print Sheet</button>
           </div>
 
           {showOffer && offerData && (
