@@ -46,9 +46,18 @@ app.delete('/cards', (req, res) => {
 app.get('/print', (req, res) => {
   const cards = loadCards();
   const total = cards.reduce((sum, c) => sum + c.compValue, 0);
+  const buyTotal = cards.reduce((sum, c) => {
+    const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
+    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    return sum + c.compValue * pct;
+  }, 0);
 
   let rows = '';
   cards.forEach((c, i) => {
+    const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
+    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const buyPrice = (c.compValue * pct).toFixed(2);
+    const pctLabel = tagCount >= 4 ? '85%' : '70%';
     const tags = c.tags && c.tags.length > 0 ? c.tags.join(', ') : '-';
     rows += '<tr>';
     rows += '<td>' + (i + 1) + '</td>';
@@ -58,6 +67,7 @@ app.get('/print', (req, res) => {
     rows += '<td>' + (c.grade || 'Raw') + '</td>';
     rows += '<td>' + tags + '</td>';
     rows += '<td>$' + c.compValue.toFixed(2) + '</td>';
+    rows += '<td>$' + buyPrice + ' <span style="font-size:11px;color:#888;">(' + pctLabel + ')</span></td>';
     rows += '<td></td>';
     rows += '</tr>';
   });
@@ -70,21 +80,21 @@ app.get('/print', (req, res) => {
   html += 'body { font-family: sans-serif; padding: 24px; color: #000; }';
   html += 'h1 { color: #FF6B00; margin-bottom: 4px; }';
   html += 'p { margin: 0 0 16px; color: #555; font-size: 14px; }';
-  html += 'table { width: 100%; border-collapse: collapse; font-size: 14px; }';
+  html += 'table { width: 100%; border-collapse: collapse; font-size: 13px; }';
   html += 'th { background: #FF6B00; color: white; padding: 8px; text-align: left; }';
   html += 'td { padding: 8px; border-bottom: 1px solid #ddd; }';
   html += 'tr:nth-child(even) { background: #f9f9f9; }';
-  html += '.total { font-weight: bold; font-size: 16px; margin-top: 16px; text-align: right; }';
+  html += '.total { font-weight: bold; font-size: 15px; margin-top: 16px; text-align: right; }';
   html += '@media print { button { display: none; } }';
   html += '</style></head><body>';
   html += '<h1>CM Collectibles</h1>';
   html += '<p>Session Sheet - ' + date + '</p>';
   html += '<table><thead><tr>';
-  html += '<th>#</th><th>Player</th><th>Year</th><th>Brand</th><th>Grade</th><th>Tags</th><th>Comp Value</th><th>Sold For</th>';
+  html += '<th>#</th><th>Player</th><th>Year</th><th>Brand</th><th>Grade</th><th>Tags</th><th>Comp Value</th><th>Buy Price</th><th>Sold For</th>';
   html += '</tr></thead><tbody>';
   html += rows;
   html += '</tbody></table>';
-  html += '<div class="total">Total Comp Value: $' + total.toFixed(2) + '</div>';
+  html += '<div class="total">Total Comp: $' + total.toFixed(2) + ' &nbsp;|&nbsp; Total Buy: $' + buyTotal.toFixed(2) + '</div>';
   html += '<br/><button onclick="window.print()" style="padding:10px 20px;background:#FF6B00;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;">Print</button>';
   html += '</body></html>';
 
