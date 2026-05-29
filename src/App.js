@@ -35,6 +35,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [lowPctInput, setLowPctInput] = useState('70');
   const [highPctInput, setHighPctInput] = useState('85');
+  const [showCounterCalc, setShowCounterCalc] = useState(false);
+  const [counterAskingInput, setCounterAskingInput] = useState('');
+  const [counterCompInput, setCounterCompInput] = useState('');
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cm_unlocked');
@@ -333,6 +336,18 @@ function App() {
     URL.revokeObjectURL(url);
   }
 
+  function getCounterResult() {
+    const asking = parseFloat(counterAskingInput);
+    const comp = parseFloat(counterCompInput);
+    if (isNaN(asking) || isNaN(comp) || comp === 0) return null;
+    const pct = (asking / comp) * 100;
+    return pct;
+  }
+
+  const counterResult = getCounterResult();
+  const counterColor = counterResult === null ? '#aaa' : counterResult <= lowPct ? '#4CAF50' : counterResult <= highPct ? '#FF6B00' : '#c0392b';
+  const counterLabel = counterResult === null ? '' : counterResult <= lowPct ? '✅ Good deal' : counterResult <= highPct ? '⚠️ Borderline' : '🚫 Too high';
+
   const fields = ['player', 'year', 'brand', 'cardNumber', 'variation'];
   const grades = ['Raw', 'PSA 7', 'PSA 8', 'PSA 9', 'PSA 10', 'BGS 9', 'BGS 9.5', 'BGS 10'];
   const allTags = ['Auto', 'RPA', 'Numbered', 'Case Hit', 'Parallel', 'Rookie', 'GOAT', 'HOF', 'Elite', 'Superstar', 'Breakout'];
@@ -415,26 +430,14 @@ function App() {
             <div style={{ marginBottom: '16px' }}>
               <label style={{ ...styles.label, textTransform: 'none' }}>Low rate (3 or fewer tags):</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="number"
-                  value={lowPctInput}
-                  onChange={e => setLowPctInput(e.target.value)}
-                  inputMode="decimal"
-                  style={{ ...styles.input, flex: 1 }}
-                />
+                <input type="number" value={lowPctInput} onChange={e => setLowPctInput(e.target.value)} inputMode="decimal" style={{ ...styles.input, flex: 1 }} />
                 <span style={{ color: '#FF6B00', fontWeight: 'bold' }}>%</span>
               </div>
             </div>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ ...styles.label, textTransform: 'none' }}>High rate (4+ tags):</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="number"
-                  value={highPctInput}
-                  onChange={e => setHighPctInput(e.target.value)}
-                  inputMode="decimal"
-                  style={{ ...styles.input, flex: 1 }}
-                />
+                <input type="number" value={highPctInput} onChange={e => setHighPctInput(e.target.value)} inputMode="decimal" style={{ ...styles.input, flex: 1 }} />
                 <span style={{ color: '#FF6B00', fontWeight: 'bold' }}>%</span>
               </div>
             </div>
@@ -459,14 +462,8 @@ function App() {
         <div style={{ textAlign: 'center', marginBottom: '12px' }}>
           {editingSessionName ? (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={sessionNameInput}
-                onChange={e => setSessionNameInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && saveSessionName(sessionNameInput)}
-                autoFocus
-                style={{ ...styles.input, flex: 1 }}
-              />
+              <input type="text" value={sessionNameInput} onChange={e => setSessionNameInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveSessionName(sessionNameInput)} autoFocus style={{ ...styles.input, flex: 1 }} />
               <button onClick={() => saveSessionName(sessionNameInput)} style={styles.btnGreen}>Save</button>
               <button onClick={() => setEditingSessionName(false)} style={{ ...styles.btnGray, padding: '6px 12px', fontSize: '14px' }}>Cancel</button>
             </div>
@@ -511,15 +508,9 @@ function App() {
                 )}
                 {editingIndex === i && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                    <input
-                      type="number"
-                      value={editingValue}
-                      onChange={e => setEditingValue(e.target.value)}
-                      inputMode="decimal"
-                      autoFocus
-                      placeholder="New value"
-                      style={{ ...styles.input, flex: 1, padding: '6px', fontSize: '14px' }}
-                    />
+                    <input type="number" value={editingValue} onChange={e => setEditingValue(e.target.value)}
+                      inputMode="decimal" autoFocus placeholder="New value"
+                      style={{ ...styles.input, flex: 1, padding: '6px', fontSize: '14px' }} />
                     <button onClick={() => saveEditedValue(i)} style={styles.btnGreen}>Save</button>
                     <button onClick={() => { setEditingIndex(null); setEditingValue(''); }}
                       style={{ padding: '6px 10px', background: '#555', color: 'white', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
@@ -555,6 +546,47 @@ function App() {
           )}
         </div>
       )}
+
+      {/* Counter Offer Calculator */}
+      <div style={styles.section}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h2 style={{ color: '#FF6B00', margin: 0 }}>🤝 Counter Offer</h2>
+          <button onClick={() => { setShowCounterCalc(!showCounterCalc); setCounterAskingInput(''); setCounterCompInput(''); }}
+            style={{ background: 'none', border: '1px solid #FF6B00', borderRadius: '6px', color: '#FF6B00', padding: '6px 12px', cursor: 'pointer', fontSize: '14px' }}>
+            {showCounterCalc ? 'Close' : 'Open'}
+          </button>
+        </div>
+
+        {showCounterCalc && (
+          <div>
+            <p style={{ color: '#aaa', fontSize: '13px', marginTop: 0 }}>They pushed back? Enter their asking price and the comp value to see what % of comp they want.</p>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>Their asking price ($):</label>
+              <input type="number" value={counterAskingInput} onChange={e => setCounterAskingInput(e.target.value)}
+                inputMode="decimal" placeholder="e.g. 85" style={styles.input} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>Comp value ($):</label>
+              <input type="number" value={counterCompInput} onChange={e => setCounterCompInput(e.target.value)}
+                inputMode="decimal" placeholder="e.g. 120" style={styles.input} />
+            </div>
+
+            {counterResult !== null && (
+              <div style={{ background: '#0a0a0a', border: '2px solid ' + counterColor, borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
+                <div style={{ fontSize: '32px', fontWeight: 'bold', color: counterColor }}>
+                  {counterResult.toFixed(1)}%
+                </div>
+                <div style={{ fontSize: '18px', color: counterColor, marginTop: '4px' }}>
+                  {counterLabel}
+                </div>
+                <div style={{ fontSize: '13px', color: '#aaa', marginTop: '8px' }}>
+                  Your rates: {lowPct}% (low) / {highPct}% (high)
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div style={styles.section}>
         <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Upload Cards</h2>
