@@ -25,6 +25,11 @@ function App() {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [sessionName, setSessionName] = useState('');
+  const [editingSessionName, setEditingSessionName] = useState(false);
+  const [sessionNameInput, setSessionNameInput] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionNameInput, setNewSessionNameInput] = useState('');
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cm_unlocked');
@@ -40,6 +45,7 @@ function App() {
           setCards(data.cards);
           setTotal(data.cards.reduce((sum, c) => sum + c.compValue, 0));
         }
+        if (data.sessionName !== undefined) setSessionName(data.sessionName);
       })
       .catch(() => {});
   }, [unlocked]);
@@ -53,6 +59,16 @@ function App() {
       setPasswordError(true);
       setPasswordInput('');
     }
+  }
+
+  async function saveSessionName(name) {
+    await fetch('/session-name', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
+      body: JSON.stringify({ sessionName: name }),
+    });
+    setSessionName(name);
+    setEditingSessionName(false);
   }
 
   async function analyzeImage(base64) {
@@ -244,14 +260,26 @@ function App() {
     }
   }
 
-  async function clearSession() {
-    await fetch('/cards', { method: 'DELETE', headers: { 'x-app-password': PASSWORD } });
+  function handleClearSession() {
+    setShowNewSessionModal(true);
+    setNewSessionNameInput('');
+  }
+
+  async function confirmNewSession() {
+    const name = newSessionNameInput.trim() || 'Untitled Session';
+    await fetch('/cards', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
+      body: JSON.stringify({ sessionName: name }),
+    });
     setCards([]);
     setTotal(0);
     setShowOffer(false);
     setOfferData(null);
     setEditingIndex(null);
     setEditingValue('');
+    setSessionName(name);
+    setShowNewSessionModal(false);
   }
 
   function calculateOffer() {
@@ -292,6 +320,8 @@ function App() {
     select: { width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #444', background: '#0a0a0a', color: 'white' },
     offerBox: { padding: '20px', background: '#1a1a1a', border: '2px solid #FF6B00', borderRadius: '8px', marginBottom: '20px', color: 'white' },
     queueBar: { background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '8px', padding: '10px 16px', marginBottom: '16px', textAlign: 'center', color: '#FF6B00', fontWeight: 'bold', fontSize: '16px' },
+    modal: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
+    modalBox: { background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '360px' },
   };
 
   if (!unlocked) {
@@ -318,9 +348,64 @@ function App() {
 
   return (
     <div style={styles.app}>
+
+      {showNewSessionModal && (
+        <div style={styles.modal}>
+          <div style={styles.modalBox}>
+            <h3 style={{ color: '#FF6B00', marginTop: 0 }}>Start New Session</h3>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>This will clear all current cards. Name your new session:</p>
+            <input
+              type="text"
+              value={newSessionNameInput}
+              onChange={e => setNewSessionNameInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && confirmNewSession()}
+              placeholder="e.g. Card Show May 28"
+              autoFocus
+              style={{ ...styles.input, marginBottom: '16px' }}
+            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={confirmNewSession} style={{ ...styles.btnOrange, flex: 1 }}>Start Session</button>
+              <button onClick={() => setShowNewSessionModal(false)} style={{ ...styles.btnGray, flex: 1 }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={styles.header}>
         <img src="/logo.jpg" alt="CM Collectibles" style={styles.logo} />
       </div>
+
+      {sessionName ? (
+        <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+          {editingSessionName ? (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={sessionNameInput}
+                onChange={e => setSessionNameInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveSessionName(sessionNameInput)}
+                autoFocus
+                style={{ ...styles.input, flex: 1 }}
+              />
+              <button onClick={() => saveSessionName(sessionNameInput)} style={styles.btnGreen}>Save</button>
+              <button onClick={() => setEditingSessionName(false)} style={{ ...styles.btnGray, padding: '6px 12px', fontSize: '14px' }}>Cancel</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <span style={{ color: '#FF6B00', fontWeight: 'bold', fontSize: '18px' }}>{sessionName}</span>
+              <button onClick={() => { setEditingSessionName(true); setSessionNameInput(sessionName); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}>✏️</button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+          <button onClick={() => setShowNewSessionModal(true)}
+            style={{ background: 'none', border: '1px dashed #FF6B00', borderRadius: '6px', color: '#FF6B00', padding: '8px 16px', cursor: 'pointer', fontSize: '14px' }}>
+            + Name this session
+          </button>
+        </div>
+      )}
 
       <div style={styles.totalBar}>
         <span>Cards: <span style={styles.orangeText}>{cards.length}</span></span>
@@ -366,7 +451,7 @@ function App() {
             </div>
           ))}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
-            <button onClick={clearSession} style={styles.btnRed}>Clear Session</button>
+            <button onClick={handleClearSession} style={styles.btnRed}>New Session</button>
             <button onClick={calculateOffer} style={styles.btnOrange}>Calculate Offer</button>
             <button onClick={openPrintSheet} style={styles.btnGray}>🖨️ Print Sheet</button>
           </div>

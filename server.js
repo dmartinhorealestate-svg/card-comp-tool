@@ -13,15 +13,15 @@ app.use(express.static(path.join(__dirname, 'build')));
 const SESSIONS_FILE = path.join(__dirname, 'sessions.json');
 const APP_PASSWORD = process.env.APP_PASSWORD || '0801';
 
-function loadCards() {
+function loadSession() {
   try {
     const data = fs.readFileSync(SESSIONS_FILE, 'utf8');
-    return JSON.parse(data).cards || [];
-  } catch { return []; }
+    return JSON.parse(data);
+  } catch { return { cards: [], sessionName: '' }; }
 }
 
-function saveCards(cards) {
-  fs.writeFileSync(SESSIONS_FILE, JSON.stringify({ cards }));
+function saveSession(session) {
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(session));
 }
 
 function checkAuth(req, res, next) {
@@ -30,28 +30,45 @@ function checkAuth(req, res, next) {
   next();
 }
 
-app.get('/cards', checkAuth, (req, res) => res.json({ cards: loadCards() }));
+app.get('/cards', checkAuth, (req, res) => {
+  const session = loadSession();
+  res.json({ cards: session.cards || [], sessionName: session.sessionName || '' });
+});
 
 app.post('/cards', checkAuth, (req, res) => {
-  const cards = loadCards();
-  cards.push(req.body);
-  saveCards(cards);
-  res.json({ cards });
+  const session = loadSession();
+  session.cards = session.cards || [];
+  session.cards.push(req.body);
+  saveSession(session);
+  res.json({ cards: session.cards, sessionName: session.sessionName || '' });
 });
 
 app.put('/cards', checkAuth, (req, res) => {
-  const { cards } = req.body;
-  saveCards(cards);
-  res.json({ cards });
+  const session = loadSession();
+  session.cards = req.body.cards;
+  saveSession(session);
+  res.json({ cards: session.cards, sessionName: session.sessionName || '' });
+});
+
+app.put('/session-name', checkAuth, (req, res) => {
+  const session = loadSession();
+  session.sessionName = req.body.sessionName || '';
+  saveSession(session);
+  res.json({ sessionName: session.sessionName });
 });
 
 app.delete('/cards', checkAuth, (req, res) => {
-  saveCards([]);
-  res.json({ cards: [] });
+  const session = loadSession();
+  session.cards = [];
+  session.sessionName = req.body.sessionName || '';
+  saveSession(session);
+  res.json({ cards: [], sessionName: session.sessionName });
 });
 
 app.get('/print', checkAuth, (req, res) => {
-  const cards = loadCards();
+  const session = loadSession();
+  const cards = session.cards || [];
+  const sessionName = session.sessionName || 'Session';
   const total = cards.reduce((sum, c) => sum + c.compValue, 0);
   const buyTotal = cards.reduce((sum, c) => {
     const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
@@ -82,10 +99,11 @@ app.get('/print', checkAuth, (req, res) => {
   const date = new Date().toLocaleDateString();
 
   let html = '<!DOCTYPE html>';
-  html += '<html><head><title>CM Collectibles Session Sheet</title>';
+  html += '<html><head><title>CM Collectibles - ' + sessionName + '</title>';
   html += '<style>';
   html += 'body { font-family: sans-serif; padding: 24px; color: #000; }';
   html += 'h1 { color: #FF6B00; margin-bottom: 4px; }';
+  html += 'h2 { margin: 0 0 4px; color: #333; font-size: 18px; }';
   html += 'p { margin: 0 0 16px; color: #555; font-size: 14px; }';
   html += 'table { width: 100%; border-collapse: collapse; font-size: 13px; }';
   html += 'th { background: #FF6B00; color: white; padding: 8px; text-align: left; }';
@@ -95,7 +113,8 @@ app.get('/print', checkAuth, (req, res) => {
   html += '@media print { button { display: none; } }';
   html += '</style></head><body>';
   html += '<h1>CM Collectibles</h1>';
-  html += '<p>Session Sheet - ' + date + '</p>';
+  html += '<h2>' + sessionName + '</h2>';
+  html += '<p>' + date + '</p>';
   html += '<table><thead><tr>';
   html += '<th>#</th><th>Player</th><th>Year</th><th>Brand</th><th>Grade</th><th>Tags</th><th>Comp Value</th><th>Buy Price</th><th>Sold For</th>';
   html += '</tr></thead><tbody>';
