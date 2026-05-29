@@ -24,6 +24,7 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingValue, setEditingValue] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('cm_unlocked');
@@ -60,6 +61,7 @@ function App() {
     setEditData(null);
     setConfirmed(false);
     setCompResult(null);
+    setDuplicateWarning(false);
     try {
       const response = await fetch('/analyze', {
         method: 'POST',
@@ -85,6 +87,7 @@ function App() {
     setCompResult(null);
     setCompValue('');
     setCopied(false);
+    setDuplicateWarning(false);
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = reader.result.split(',')[1];
@@ -118,6 +121,7 @@ function App() {
       setCompResult(null);
       setCompValue('');
       setCopied(false);
+      setDuplicateWarning(false);
     }
   }
 
@@ -189,9 +193,27 @@ function App() {
     setEditingValue('');
   }
 
+  function checkDuplicate() {
+    if (!editData) return false;
+    return cards.some(c =>
+      c.player && editData.player &&
+      c.player.toLowerCase() === editData.player.toLowerCase() &&
+      c.year === editData.year &&
+      c.brand && editData.brand &&
+      c.brand.toLowerCase() === editData.brand.toLowerCase()
+    );
+  }
+
   async function addToTotal() {
     const value = parseFloat(compValue);
     if (isNaN(value)) return;
+
+    if (checkDuplicate() && !duplicateWarning) {
+      setDuplicateWarning(true);
+      return;
+    }
+
+    setDuplicateWarning(false);
     const newCard = { ...editData, compValue: value };
     const response = await fetch('/cards', {
       method: 'POST',
@@ -471,6 +493,15 @@ function App() {
               {queue.length > 1 && queueIndex < queue.length - 1 ? 'Add & Next Card' : 'Add to Total'}
             </button>
           </div>
+          {duplicateWarning && (
+            <div style={{ marginTop: '12px', padding: '12px', background: '#7a1a1a', border: '1px solid #c0392b', borderRadius: '8px' }}>
+              <p style={{ margin: '0 0 10px', color: 'white', fontWeight: 'bold' }}>⚠️ Duplicate! This card is already in your session. Add anyway?</p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={addToTotal} style={{ ...styles.btnOrange, flex: 1 }}>Yes, Add It</button>
+                <button onClick={() => setDuplicateWarning(false)} style={{ ...styles.btnGray, flex: 1 }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
