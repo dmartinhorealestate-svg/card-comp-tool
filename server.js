@@ -32,6 +32,12 @@ app.post('/cards', (req, res) => {
   res.json({ cards });
 });
 
+app.put('/cards', (req, res) => {
+  const { cards } = req.body;
+  saveCards(cards);
+  res.json({ cards });
+});
+
 app.delete('/cards', (req, res) => {
   saveCards([]);
   res.json({ cards: [] });

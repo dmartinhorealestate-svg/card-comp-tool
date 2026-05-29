@@ -30,15 +30,6 @@ function App() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (compResult && compResult.searchQuery) {
-      navigator.clipboard.writeText(compResult.searchQuery).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch(() => {});
-    }
-  }, [compResult]);
-
   async function analyzeImage(base64) {
     setLoading(true);
     setCardData(null);
@@ -125,6 +116,18 @@ function App() {
     navigator.clipboard.writeText(compResult.searchQuery);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function deleteCard(index) {
+    const newCards = cards.filter((_, i) => i !== index);
+    const newTotal = newCards.reduce((sum, c) => sum + c.compValue, 0);
+    await fetch('/cards', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: newCards }),
+    });
+    setCards(newCards);
+    setTotal(newTotal);
   }
 
   async function addToTotal() {
@@ -217,14 +220,17 @@ function App() {
         <div>
           <h3 style={{ color: '#FF6B00' }}>Session Cards:</h3>
           {cards.map((c, i) => (
-            <div key={i} style={styles.card}>
-              <strong>{c.player}</strong> {c.year} {c.grade} — <span style={styles.orangeText}>${c.compValue.toFixed(2)}</span>
-              {c.printRun && <span style={{ marginLeft: '6px', color: '#FF6B00' }}>#{c.printRun}</span>}
-              {c.tags && c.tags.length > 0 && (
-                <div style={{ marginTop: '4px' }}>
-                  {c.tags.map(tag => <span key={tag} style={styles.tag}>{tag}</span>)}
-                </div>
-              )}
+            <div key={i} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <strong>{c.player}</strong> {c.year} {c.grade} — <span style={styles.orangeText}>${c.compValue.toFixed(2)}</span>
+                {c.printRun && <span style={{ marginLeft: '6px', color: '#FF6B00' }}>#{c.printRun}</span>}
+                {c.tags && c.tags.length > 0 && (
+                  <div style={{ marginTop: '4px' }}>
+                    {c.tags.map(tag => <span key={tag} style={styles.tag}>{tag}</span>)}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => deleteCard(i)} style={{ background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '16px', marginLeft: '8px' }}>✕</button>
             </div>
           ))}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '10px' }}>
