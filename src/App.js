@@ -297,8 +297,17 @@ function App() {
     window.open('/print?pw=' + PASSWORD, '_blank');
   }
 
-  function exportCSV() {
-    window.open('/export-csv?pw=' + PASSWORD, '_blank');
+  async function exportCSV() {
+    const response = await fetch('/export-csv?pw=' + PASSWORD);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (sessionName || 'Session') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   const fields = ['player', 'year', 'brand', 'cardNumber', 'variation'];
