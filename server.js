@@ -16,7 +16,9 @@ const APP_PASSWORD = process.env.APP_PASSWORD || '0801';
 function loadSession() {
   try {
     const data = fs.readFileSync(SESSIONS_FILE, 'utf8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) return { cards: parsed, sessionName: '' };
+    return parsed;
   } catch { return { cards: [], sessionName: '' }; }
 }
 
@@ -37,7 +39,7 @@ app.get('/cards', checkAuth, (req, res) => {
 
 app.post('/cards', checkAuth, (req, res) => {
   const session = loadSession();
-  session.cards = session.cards || [];
+  if (!Array.isArray(session.cards)) session.cards = [];
   session.cards.push(req.body);
   saveSession(session);
   res.json({ cards: session.cards, sessionName: session.sessionName || '' });
