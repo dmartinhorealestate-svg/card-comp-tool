@@ -17,6 +17,8 @@ function App() {
   const [showOffer, setShowOffer] = useState(false);
   const [offerData, setOfferData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
 
   useEffect(() => {
     fetch('/cards')
@@ -149,6 +151,22 @@ function App() {
     setTotal(newTotal);
   }
 
+  async function saveEditedValue(index) {
+    const value = parseFloat(editingValue);
+    if (isNaN(value)) return;
+    const newCards = cards.map((c, i) => i === index ? { ...c, compValue: value } : c);
+    const newTotal = newCards.reduce((sum, c) => sum + c.compValue, 0);
+    await fetch('/cards', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: newCards }),
+    });
+    setCards(newCards);
+    setTotal(newTotal);
+    setEditingIndex(null);
+    setEditingValue('');
+  }
+
   async function addToTotal() {
     const value = parseFloat(compValue);
     if (isNaN(value)) return;
@@ -188,6 +206,8 @@ function App() {
     setTotal(0);
     setShowOffer(false);
     setOfferData(null);
+    setEditingIndex(null);
+    setEditingValue('');
   }
 
   function calculateOffer() {
@@ -216,6 +236,7 @@ function App() {
     btnOrange: { padding: '10px 20px', background: '#FF6B00', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
     btnRed: { padding: '10px 20px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
     btnBlue: { padding: '10px 20px', background: '#1565C0', color: 'white', border: 'none', borderRadius: '6px', fontSize: '16px', cursor: 'pointer' },
+    btnGreen: { padding: '6px 12px', background: '#2e7d32', color: 'white', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' },
     section: { background: '#1a1a1a', border: '1px solid #333', borderRadius: '8px', padding: '15px', marginTop: '20px' },
     label: { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#FF6B00', textTransform: 'capitalize' },
     input: { width: '100%', padding: '8px', fontSize: '16px', borderRadius: '6px', border: '1px solid #444', boxSizing: 'border-box', background: '#0a0a0a', color: 'white' },
@@ -240,7 +261,7 @@ function App() {
           <h3 style={{ color: '#FF6B00' }}>Session Cards:</h3>
           {cards.map((c, i) => (
             <div key={i} style={{ ...styles.card, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
+              <div style={{ flex: 1 }}>
                 <strong>{c.player}</strong> {c.year} {c.grade} — <span style={styles.orangeText}>${c.compValue.toFixed(2)}</span>
                 {c.printRun && <span style={{ marginLeft: '6px', color: '#FF6B00' }}>#{c.printRun}</span>}
                 {c.tags && c.tags.length > 0 && (
@@ -248,8 +269,29 @@ function App() {
                     {c.tags.map(tag => <span key={tag} style={styles.tag}>{tag}</span>)}
                   </div>
                 )}
+                {editingIndex === i && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      value={editingValue}
+                      onChange={e => setEditingValue(e.target.value)}
+                      inputMode="decimal"
+                      autoFocus
+                      placeholder="New value"
+                      style={{ ...styles.input, flex: 1, padding: '6px', fontSize: '14px' }}
+                    />
+                    <button onClick={() => saveEditedValue(i)} style={styles.btnGreen}>Save</button>
+                    <button onClick={() => { setEditingIndex(null); setEditingValue(''); }}
+                      style={{ padding: '6px 10px', background: '#555', color: 'white', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+                  </div>
+                )}
               </div>
-              <button onClick={() => deleteCard(i)} style={{ background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '16px', marginLeft: '8px' }}>✕</button>
+              <div style={{ display: 'flex', gap: '6px', marginLeft: '8px' }}>
+                <button onClick={() => { setEditingIndex(i); setEditingValue(c.compValue.toString()); }}
+                  style={{ background: '#FF6B00', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '14px' }}>✏️</button>
+                <button onClick={() => deleteCard(i)}
+                  style={{ background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+              </div>
             </div>
           ))}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', marginTop: '10px' }}>
