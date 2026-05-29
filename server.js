@@ -65,7 +65,10 @@ app.delete('/cards', checkAuth, (req, res) => {
   res.json({ cards: [], sessionName: session.sessionName });
 });
 
-app.get('/print', checkAuth, (req, res) => {
+app.get('/print', (req, res) => {
+  const pw = req.query.pw;
+  if (pw !== APP_PASSWORD) return res.status(401).send('Unauthorized');
+
   const session = loadSession();
   const cards = session.cards || [];
   const sessionName = session.sessionName || 'Session';
