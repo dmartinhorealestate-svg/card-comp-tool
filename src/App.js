@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+const PASSWORD = '0801';
+
 function App() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
   const [queue, setQueue] = useState([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [imageBase64, setImageBase64] = useState(null);
@@ -21,7 +26,13 @@ function App() {
   const [editingValue, setEditingValue] = useState('');
 
   useEffect(() => {
-    fetch('/cards')
+    const saved = sessionStorage.getItem('cm_unlocked');
+    if (saved === 'yes') setUnlocked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    fetch('/cards', { headers: { 'x-app-password': PASSWORD } })
       .then(r => r.json())
       .then(data => {
         if (data.cards) {
@@ -30,7 +41,18 @@ function App() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [unlocked]);
+
+  function handleUnlock() {
+    if (passwordInput === PASSWORD) {
+      sessionStorage.setItem('cm_unlocked', 'yes');
+      setUnlocked(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+      setPasswordInput('');
+    }
+  }
 
   async function analyzeImage(base64) {
     setLoading(true);
@@ -41,7 +63,7 @@ function App() {
     try {
       const response = await fetch('/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
         body: JSON.stringify({ imageBase64: base64 }),
       });
       const parsed = await response.json();
@@ -120,7 +142,7 @@ function App() {
     try {
       const response = await fetch('/comp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
         body: JSON.stringify(editData),
       });
       const data = await response.json();
@@ -144,7 +166,7 @@ function App() {
     const newTotal = newCards.reduce((sum, c) => sum + c.compValue, 0);
     await fetch('/cards', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
       body: JSON.stringify({ cards: newCards }),
     });
     setCards(newCards);
@@ -158,7 +180,7 @@ function App() {
     const newTotal = newCards.reduce((sum, c) => sum + c.compValue, 0);
     await fetch('/cards', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
       body: JSON.stringify({ cards: newCards }),
     });
     setCards(newCards);
@@ -173,7 +195,7 @@ function App() {
     const newCard = { ...editData, compValue: value };
     const response = await fetch('/cards', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-app-password': PASSWORD },
       body: JSON.stringify(newCard),
     });
     const data = await response.json();
@@ -201,7 +223,7 @@ function App() {
   }
 
   async function clearSession() {
-    await fetch('/cards', { method: 'DELETE' });
+    await fetch('/cards', { method: 'DELETE', headers: { 'x-app-password': PASSWORD } });
     setCards([]);
     setTotal(0);
     setShowOffer(false);
@@ -222,7 +244,7 @@ function App() {
   }
 
   function openPrintSheet() {
-    window.open('/print', '_blank');
+    window.open('/print?pw=' + PASSWORD, '_blank');
   }
 
   const fields = ['player', 'year', 'brand', 'cardNumber', 'variation'];
@@ -249,6 +271,28 @@ function App() {
     offerBox: { padding: '20px', background: '#1a1a1a', border: '2px solid #FF6B00', borderRadius: '8px', marginBottom: '20px', color: 'white' },
     queueBar: { background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '8px', padding: '10px 16px', marginBottom: '16px', textAlign: 'center', color: '#FF6B00', fontWeight: 'bold', fontSize: '16px' },
   };
+
+  if (!unlocked) {
+    return (
+      <div style={{ ...styles.app, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <img src="/logo.jpg" alt="CM Collectibles" style={{ width: '180px', marginBottom: '30px' }} />
+        <div style={{ background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '12px', padding: '30px', width: '100%', maxWidth: '320px', textAlign: 'center' }}>
+          <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Enter Password</h2>
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={e => setPasswordInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleUnlock()}
+            placeholder="Password"
+            autoFocus
+            style={{ ...styles.input, marginBottom: '12px', textAlign: 'center', fontSize: '24px', letterSpacing: '4px' }}
+          />
+          {passwordError && <p style={{ color: '#c0392b', margin: '0 0 12px' }}>Incorrect password</p>}
+          <button onClick={handleUnlock} style={{ ...styles.btnOrange, width: '100%' }}>Unlock</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.app}>

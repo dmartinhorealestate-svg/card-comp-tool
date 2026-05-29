@@ -11,6 +11,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'build')));
 
 const SESSIONS_FILE = path.join(__dirname, 'sessions.json');
+const APP_PASSWORD = process.env.APP_PASSWORD || '0801';
 
 function loadCards() {
   try {
@@ -23,27 +24,33 @@ function saveCards(cards) {
   fs.writeFileSync(SESSIONS_FILE, JSON.stringify({ cards }));
 }
 
-app.get('/cards', (req, res) => res.json({ cards: loadCards() }));
+function checkAuth(req, res, next) {
+  const pw = req.headers['x-app-password'];
+  if (pw !== APP_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  next();
+}
 
-app.post('/cards', (req, res) => {
+app.get('/cards', checkAuth, (req, res) => res.json({ cards: loadCards() }));
+
+app.post('/cards', checkAuth, (req, res) => {
   const cards = loadCards();
   cards.push(req.body);
   saveCards(cards);
   res.json({ cards });
 });
 
-app.put('/cards', (req, res) => {
+app.put('/cards', checkAuth, (req, res) => {
   const { cards } = req.body;
   saveCards(cards);
   res.json({ cards });
 });
 
-app.delete('/cards', (req, res) => {
+app.delete('/cards', checkAuth, (req, res) => {
   saveCards([]);
   res.json({ cards: [] });
 });
 
-app.get('/print', (req, res) => {
+app.get('/print', checkAuth, (req, res) => {
   const cards = loadCards();
   const total = cards.reduce((sum, c) => sum + c.compValue, 0);
   const buyTotal = cards.reduce((sum, c) => {
