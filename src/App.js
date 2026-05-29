@@ -78,6 +78,25 @@ function App() {
     loadImageFromFile(files[0]);
   }
 
+  function cancelCurrentCard() {
+    const nextIndex = queueIndex + 1;
+    if (nextIndex < queue.length) {
+      setQueueIndex(nextIndex);
+      loadImageFromFile(queue[nextIndex]);
+    } else {
+      setQueue([]);
+      setQueueIndex(0);
+      setImageURL(null);
+      setImageBase64(null);
+      setCardData(null);
+      setEditData(null);
+      setConfirmed(false);
+      setCompResult(null);
+      setCompValue('');
+      setCopied(false);
+    }
+  }
+
   function handleEditChange(field, value) {
     setEditData(prev => ({ ...prev, [field]: value }));
   }
@@ -261,8 +280,9 @@ function App() {
         )}
 
         {imageURL && (
-          <div>
-            <img src={imageURL} alt="card" style={{ maxWidth: '100%', marginTop: '10px', borderRadius: '8px' }} />
+          <div style={{ position: 'relative', marginTop: '10px' }}>
+            <img src={imageURL} alt="card" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+            <button onClick={cancelCurrentCard} style={{ position: 'absolute', top: '8px', right: '8px', background: '#c0392b', color: 'white', border: 'none', borderRadius: '50%', width: '32px', height: '32px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             {loading && (
               <div style={{ textAlign: 'center', marginTop: '12px', color: '#FF6B00', fontSize: '16px' }}>
                 🔍 Analyzing card...
@@ -276,7 +296,10 @@ function App() {
 
       {editData && !confirmed && !cardData?.error && (
         <div style={styles.section}>
-          <h3 style={{ color: '#FF6B00', marginTop: 0 }}>Edit Card Details:</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ color: '#FF6B00', margin: 0 }}>Edit Card Details:</h3>
+            <button onClick={cancelCurrentCard} style={{ background: '#c0392b', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontSize: '14px' }}>✕ Cancel Card</button>
+          </div>
           {fields.map(field => (
             <div key={field} style={{ marginBottom: '10px' }}>
               <label style={styles.label}>{field}:</label>
