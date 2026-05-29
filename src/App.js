@@ -30,6 +30,28 @@ function App() {
       .catch(() => {});
   }, []);
 
+  async function analyzeImage(base64) {
+    setLoading(true);
+    setCardData(null);
+    setEditData(null);
+    setConfirmed(false);
+    setCompResult(null);
+    try {
+      const response = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      const parsed = await response.json();
+      if (parsed.error) throw new Error(parsed.error);
+      setCardData(parsed);
+      setEditData({ ...parsed, grade: 'Raw', tags: parsed.tags || [], printRun: parsed.printRun || '' });
+    } catch (err) {
+      setCardData({ error: 'Could not parse card data. Try again.' });
+    }
+    setLoading(false);
+  }
+
   function loadImageFromFile(file) {
     const url = URL.createObjectURL(file);
     setImageURL(url);
@@ -40,7 +62,11 @@ function App() {
     setCompValue('');
     setCopied(false);
     const reader = new FileReader();
-    reader.onload = () => setImageBase64(reader.result.split(',')[1]);
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      setImageBase64(base64);
+      analyzeImage(base64);
+    };
     reader.readAsDataURL(file);
   }
 
@@ -50,29 +76,6 @@ function App() {
     setQueue(files);
     setQueueIndex(0);
     loadImageFromFile(files[0]);
-  }
-
-  async function analyzeCard() {
-    if (!imageBase64) return;
-    setLoading(true);
-    setCardData(null);
-    setEditData(null);
-    setConfirmed(false);
-    setCompResult(null);
-    try {
-      const response = await fetch('/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64 }),
-      });
-      const parsed = await response.json();
-      if (parsed.error) throw new Error(parsed.error);
-      setCardData(parsed);
-      setEditData({ ...parsed, grade: 'Raw', tags: parsed.tags || [], printRun: parsed.printRun || '' });
-    } catch (err) {
-      setCardData({ error: 'Could not parse card data. Try again.' });
-    }
-    setLoading(false);
   }
 
   function handleEditChange(field, value) {
@@ -163,9 +166,7 @@ function App() {
       const pct = tagCount >= 4 ? 0.85 : 0.70;
       offerTotal += card.compValue * pct;
     });
-    setOfferData({
-      offerPrice: Math.round(offerTotal * 100) / 100
-    });
+    setOfferData({ offerPrice: Math.round(offerTotal * 100) / 100 });
     setShowOffer(true);
   }
 
@@ -174,27 +175,10 @@ function App() {
   const allTags = ['Auto', 'RPA', 'Numbered', 'Case Hit', 'Parallel', 'Rookie', 'GOAT', 'HOF', 'Elite', 'Superstar', 'Breakout'];
 
   const styles = {
-    app: {
-      fontFamily: 'sans-serif',
-      maxWidth: '600px',
-      margin: '0 auto',
-      padding: '20px',
-      minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
-      color: 'white',
-    },
+    app: { fontFamily: 'sans-serif', maxWidth: '600px', margin: '0 auto', padding: '20px', minHeight: '100vh', backgroundColor: '#0a0a0a', color: 'white' },
     header: { textAlign: 'center', marginBottom: '20px' },
     logo: { width: '180px', marginBottom: '10px' },
-    totalBar: {
-      background: '#1a1a1a',
-      border: '1px solid #FF6B00',
-      borderRadius: '8px',
-      padding: '12px 16px',
-      marginBottom: '20px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      fontSize: '16px',
-    },
+    totalBar: { background: '#1a1a1a', border: '1px solid #FF6B00', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '16px' },
     orangeText: { color: '#FF6B00', fontWeight: 'bold' },
     card: { padding: '10px', background: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', marginBottom: '8px' },
     tag: { background: '#FF6B00', color: 'white', borderRadius: '4px', padding: '2px 6px', fontSize: '12px', marginRight: '4px' },
@@ -264,10 +248,10 @@ function App() {
         {imageURL && (
           <div>
             <img src={imageURL} alt="card" style={{ maxWidth: '100%', marginTop: '10px', borderRadius: '8px' }} />
-            {!cardData && (
-              <button onClick={analyzeCard} disabled={loading} style={{ ...styles.btnOrange, marginTop: '10px', width: '100%' }}>
-                {loading ? 'Analyzing...' : 'Analyze Card'}
-              </button>
+            {loading && (
+              <div style={{ textAlign: 'center', marginTop: '12px', color: '#FF6B00', fontSize: '16px' }}>
+                🔍 Analyzing card...
+              </div>
             )}
           </div>
         )}
@@ -344,8 +328,15 @@ function App() {
 
           <h3 style={{ color: '#FF6B00' }}>Enter Comp Value:</h3>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <input type="number" placeholder="Enter $ value" value={compValue} onChange={e => setCompValue(e.target.value)}
-              style={{ ...styles.input, flex: 1 }} />
+            <input
+              type="number"
+              placeholder="Enter $ value"
+              value={compValue}
+              onChange={e => setCompValue(e.target.value)}
+              inputMode="decimal"
+              autoFocus
+              style={{ ...styles.input, flex: 1 }}
+            />
             <button onClick={addToTotal} style={styles.btnBlue}>
               {queue.length > 1 && queueIndex < queue.length - 1 ? 'Add & Next Card' : 'Add to Total'}
             </button>
