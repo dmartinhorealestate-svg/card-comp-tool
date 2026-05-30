@@ -17,9 +17,9 @@ function loadSession() {
   try {
     const data = fs.readFileSync(SESSIONS_FILE, 'utf8');
     const parsed = JSON.parse(data);
-    if (Array.isArray(parsed)) return { cards: parsed, sessionName: '' };
+    if (Array.isArray(parsed)) return { cards: parsed, sessionName: '', lowPct: 70, highPct: 85 };
     return parsed;
-  } catch { return { cards: [], sessionName: '' }; }
+  } catch { return { cards: [], sessionName: '', lowPct: 70, highPct: 85 }; }
 }
 
 function saveSession(session) {
@@ -34,7 +34,12 @@ function checkAuth(req, res, next) {
 
 app.get('/cards', checkAuth, (req, res) => {
   const session = loadSession();
-  res.json({ cards: session.cards || [], sessionName: session.sessionName || '' });
+  res.json({
+    cards: session.cards || [],
+    sessionName: session.sessionName || '',
+    lowPct: session.lowPct !== undefined ? session.lowPct : 70,
+    highPct: session.highPct !== undefined ? session.highPct : 85,
+  });
 });
 
 app.post('/cards', checkAuth, (req, res) => {
@@ -42,14 +47,24 @@ app.post('/cards', checkAuth, (req, res) => {
   if (!Array.isArray(session.cards)) session.cards = [];
   session.cards.push(req.body);
   saveSession(session);
-  res.json({ cards: session.cards, sessionName: session.sessionName || '' });
+  res.json({
+    cards: session.cards,
+    sessionName: session.sessionName || '',
+    lowPct: session.lowPct !== undefined ? session.lowPct : 70,
+    highPct: session.highPct !== undefined ? session.highPct : 85,
+  });
 });
 
 app.put('/cards', checkAuth, (req, res) => {
   const session = loadSession();
   session.cards = req.body.cards;
   saveSession(session);
-  res.json({ cards: session.cards, sessionName: session.sessionName || '' });
+  res.json({
+    cards: session.cards,
+    sessionName: session.sessionName || '',
+    lowPct: session.lowPct !== undefined ? session.lowPct : 70,
+    highPct: session.highPct !== undefined ? session.highPct : 85,
+  });
 });
 
 app.put('/session-name', checkAuth, (req, res) => {
@@ -57,6 +72,14 @@ app.put('/session-name', checkAuth, (req, res) => {
   session.sessionName = req.body.sessionName || '';
   saveSession(session);
   res.json({ sessionName: session.sessionName });
+});
+
+app.put('/percentages', checkAuth, (req, res) => {
+  const session = loadSession();
+  session.lowPct = parseFloat(req.body.lowPct) || 70;
+  session.highPct = parseFloat(req.body.highPct) || 85;
+  saveSession(session);
+  res.json({ lowPct: session.lowPct, highPct: session.highPct });
 });
 
 app.delete('/cards', checkAuth, (req, res) => {
@@ -74,19 +97,21 @@ app.get('/print', (req, res) => {
   const session = loadSession();
   const cards = session.cards || [];
   const sessionName = session.sessionName || 'Session';
+  const lowPct = session.lowPct !== undefined ? session.lowPct : 70;
+  const highPct = session.highPct !== undefined ? session.highPct : 85;
   const total = cards.reduce((sum, c) => sum + c.compValue, 0);
   const buyTotal = cards.reduce((sum, c) => {
     const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
-    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const pct = tagCount >= 4 ? highPct / 100 : lowPct / 100;
     return sum + c.compValue * pct;
   }, 0);
 
   let rows = '';
   cards.forEach((c, i) => {
     const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
-    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const pct = tagCount >= 4 ? highPct / 100 : lowPct / 100;
     const buyPrice = (c.compValue * pct).toFixed(2);
-    const pctLabel = tagCount >= 4 ? '85%' : '70%';
+    const pctLabel = tagCount >= 4 ? highPct + '%' : lowPct + '%';
     const tags = c.tags && c.tags.length > 0 ? c.tags.join(', ') : '-';
     rows += '<tr>';
     rows += '<td>' + (i + 1) + '</td>';
@@ -119,7 +144,7 @@ app.get('/print', (req, res) => {
   html += '</style></head><body>';
   html += '<h1>CM Collectibles</h1>';
   html += '<h2>' + sessionName + '</h2>';
-  html += '<p>' + date + '</p>';
+  html += '<p>' + date + ' | Offer rates: ' + lowPct + '% / ' + highPct + '%</p>';
   html += '<table><thead><tr>';
   html += '<th>#</th><th>Player</th><th>Year</th><th>Brand</th><th>Grade</th><th>Tags</th><th>Comp Value</th><th>Buy Price</th><th>Sold For</th>';
   html += '</tr></thead><tbody>';
@@ -139,15 +164,18 @@ app.get('/export-csv', (req, res) => {
   const session = loadSession();
   const cards = session.cards || [];
   const sessionName = session.sessionName || 'Session';
+  const lowPct = session.lowPct !== undefined ? session.lowPct : 70;
+  const highPct = session.highPct !== undefined ? session.highPct : 85;
   const date = new Date().toLocaleDateString();
 
   let csv = 'Session: ' + sessionName + '\n';
-  csv += 'Date: ' + date + '\n\n';
+  csv += 'Date: ' + date + '\n';
+  csv += 'Offer Rates: ' + lowPct + '% / ' + highPct + '%\n\n';
   csv += '#,Player,Year,Brand,Grade,Card Number,Print Run,Tags,Comp Value,Buy Price,Sold For\n';
 
   cards.forEach((c, i) => {
     const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
-    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const pct = tagCount >= 4 ? highPct / 100 : lowPct / 100;
     const buyPrice = (c.compValue * pct).toFixed(2);
     const tags = c.tags && c.tags.length > 0 ? c.tags.join(' | ') : '';
     csv += (i + 1) + ',';
@@ -166,7 +194,7 @@ app.get('/export-csv', (req, res) => {
   const total = cards.reduce((sum, c) => sum + c.compValue, 0);
   const buyTotal = cards.reduce((sum, c) => {
     const tagCount = (c.tags || []).length + (c.grade && c.grade !== 'Raw' ? 1 : 0);
-    const pct = tagCount >= 4 ? 0.85 : 0.70;
+    const pct = tagCount >= 4 ? highPct / 100 : lowPct / 100;
     return sum + c.compValue * pct;
   }, 0);
 

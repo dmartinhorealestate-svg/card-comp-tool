@@ -340,8 +340,7 @@ function App() {
     const asking = parseFloat(counterAskingInput);
     const comp = parseFloat(counterCompInput);
     if (isNaN(asking) || isNaN(comp) || comp === 0) return null;
-    const pct = (asking / comp) * 100;
-    return pct;
+    return (asking / comp) * 100;
   }
 
   const counterResult = getCounterResult();
@@ -426,7 +425,7 @@ function App() {
         <div style={styles.modal}>
           <div style={styles.modalBox}>
             <h3 style={{ color: '#FF6B00', marginTop: 0 }}>⚙️ Offer Settings</h3>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Set your offer percentages. 4+ tags uses the high rate, 3 or fewer uses the low rate.</p>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>4+ tags uses the high rate, 3 or fewer uses the low rate.</p>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ ...styles.label, textTransform: 'none' }}>Low rate (3 or fewer tags):</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -449,11 +448,40 @@ function App() {
         </div>
       )}
 
+      {showCounterCalc && (
+        <div style={styles.modal}>
+          <div style={styles.modalBox}>
+            <h3 style={{ color: '#FF6B00', marginTop: 0 }}>🤝 Counter Offer</h3>
+            <p style={{ color: '#aaa', fontSize: '13px', marginTop: 0 }}>Enter their asking price and the comp value to see what % of comp they want.</p>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>Their asking price ($):</label>
+              <input type="number" value={counterAskingInput} onChange={e => setCounterAskingInput(e.target.value)}
+                inputMode="decimal" placeholder="e.g. 85" style={styles.input} />
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ ...styles.label, textTransform: 'none' }}>Comp value ($):</label>
+              <input type="number" value={counterCompInput} onChange={e => setCounterCompInput(e.target.value)}
+                inputMode="decimal" placeholder="e.g. 120" style={styles.input} />
+            </div>
+            {counterResult !== null && (
+              <div style={{ background: '#0a0a0a', border: '2px solid ' + counterColor, borderRadius: '8px', padding: '16px', textAlign: 'center', marginBottom: '16px' }}>
+                <div style={{ fontSize: '36px', fontWeight: 'bold', color: counterColor }}>{counterResult.toFixed(1)}%</div>
+                <div style={{ fontSize: '18px', color: counterColor, marginTop: '4px' }}>{counterLabel}</div>
+              </div>
+            )}
+            <button onClick={() => { setShowCounterCalc(false); setCounterAskingInput(''); setCounterCompInput(''); }}
+              style={{ ...styles.btnGray, width: '100%' }}>Close</button>
+          </div>
+        </div>
+      )}
+
       <div style={styles.header}>
         <img src="/logo.jpg" alt="CM Collectibles" style={styles.logo} />
       </div>
 
-      <div style={{ textAlign: 'right', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '8px' }}>
+        <button onClick={() => { setShowCounterCalc(true); setCounterAskingInput(''); setCounterCompInput(''); }}
+          style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '22px', cursor: 'pointer' }}>🤝</button>
         <button onClick={() => { setShowSettings(true); setLowPctInput(String(lowPct)); setHighPctInput(String(highPct)); }}
           style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '22px', cursor: 'pointer' }}>⚙️</button>
       </div>
@@ -487,10 +515,6 @@ function App() {
       <div style={styles.totalBar}>
         <span>Cards: <span style={styles.orangeText}>{cards.length}</span></span>
         <span>Total: <span style={styles.orangeText}>${total.toFixed(2)}</span></span>
-      </div>
-
-      <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '13px', color: '#aaa' }}>
-        Offer rates: <span style={{ color: '#FF6B00' }}>{lowPct}%</span> / <span style={{ color: '#FF6B00' }}>{highPct}%</span>
       </div>
 
       {cards.length > 0 && (
@@ -535,9 +559,6 @@ function App() {
           {showOffer && offerData && (
             <div style={styles.offerBox}>
               <h3 style={{ marginTop: 0, color: '#FF6B00' }}>Collection Offer</h3>
-              <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '8px' }}>
-                Rates: {lowPct}% (low) / {highPct}% (high)
-              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '24px', background: '#FF6B00', padding: '12px', borderRadius: '6px' }}>
                 <span>Offer Price:</span>
                 <strong>${offerData.offerPrice.toFixed(2)}</strong>
@@ -546,47 +567,6 @@ function App() {
           )}
         </div>
       )}
-
-      {/* Counter Offer Calculator */}
-      <div style={styles.section}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h2 style={{ color: '#FF6B00', margin: 0 }}>🤝 Counter Offer</h2>
-          <button onClick={() => { setShowCounterCalc(!showCounterCalc); setCounterAskingInput(''); setCounterCompInput(''); }}
-            style={{ background: 'none', border: '1px solid #FF6B00', borderRadius: '6px', color: '#FF6B00', padding: '6px 12px', cursor: 'pointer', fontSize: '14px' }}>
-            {showCounterCalc ? 'Close' : 'Open'}
-          </button>
-        </div>
-
-        {showCounterCalc && (
-          <div>
-            <p style={{ color: '#aaa', fontSize: '13px', marginTop: 0 }}>They pushed back? Enter their asking price and the comp value to see what % of comp they want.</p>
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ ...styles.label, textTransform: 'none' }}>Their asking price ($):</label>
-              <input type="number" value={counterAskingInput} onChange={e => setCounterAskingInput(e.target.value)}
-                inputMode="decimal" placeholder="e.g. 85" style={styles.input} />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ ...styles.label, textTransform: 'none' }}>Comp value ($):</label>
-              <input type="number" value={counterCompInput} onChange={e => setCounterCompInput(e.target.value)}
-                inputMode="decimal" placeholder="e.g. 120" style={styles.input} />
-            </div>
-
-            {counterResult !== null && (
-              <div style={{ background: '#0a0a0a', border: '2px solid ' + counterColor, borderRadius: '8px', padding: '16px', textAlign: 'center' }}>
-                <div style={{ fontSize: '32px', fontWeight: 'bold', color: counterColor }}>
-                  {counterResult.toFixed(1)}%
-                </div>
-                <div style={{ fontSize: '18px', color: counterColor, marginTop: '4px' }}>
-                  {counterLabel}
-                </div>
-                <div style={{ fontSize: '13px', color: '#aaa', marginTop: '8px' }}>
-                  Your rates: {lowPct}% (low) / {highPct}% (high)
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       <div style={styles.section}>
         <h2 style={{ color: '#FF6B00', marginTop: 0 }}>Upload Cards</h2>
