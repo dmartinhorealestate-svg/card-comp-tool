@@ -144,7 +144,7 @@ app.get('/print', (req, res) => {
   html += '</style></head><body>';
   html += '<h1>CM Collectibles</h1>';
   html += '<h2>' + sessionName + '</h2>';
-  html += '<p>' + date + ' | Offer rates: ' + lowPct + '% / ' + highPct + '%</p>';
+  html += '<p>' + date + '</p>';
   html += '<table><thead><tr>';
   html += '<th>#</th><th>Player</th><th>Year</th><th>Brand</th><th>Grade</th><th>Tags</th><th>Comp Value</th><th>Buy Price</th><th>Sold For</th>';
   html += '</tr></thead><tbody>';
@@ -169,8 +169,7 @@ app.get('/export-csv', (req, res) => {
   const date = new Date().toLocaleDateString();
 
   let csv = 'Session: ' + sessionName + '\n';
-  csv += 'Date: ' + date + '\n';
-  csv += 'Offer Rates: ' + lowPct + '% / ' + highPct + '%\n\n';
+  csv += 'Date: ' + date + '\n\n';
   csv += '#,Player,Year,Brand,Grade,Card Number,Print Run,Tags,Comp Value,Buy Price,Sold For\n';
 
   cards.forEach((c, i) => {
@@ -224,7 +223,7 @@ app.post('/analyze', async (req, res) => {
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-            { type: 'text', text: 'This is a sports card. Analyze it and respond with ONLY a JSON object with these fields:\n- player (string)\n- year (string)\n- brand (string)\n- cardNumber (string or empty string "" if not visible on the card)\n- variation (string)\n- printRun (string - ONLY if there is a print run number like "1/5" or "45/99" visible on the card, otherwise empty string "")\n- tags (array of strings from this list only):\n  "Auto" (if autograph present),\n  "RPA" (if rookie patch auto),\n  "Numbered" (if print run shown like /10 /99 /149 etc),\n  "Case Hit",\n  "Parallel" (include type like "Parallel - Prizm Gold"),\n  "Rookie" (if rookie card),\n  "GOAT" (if all-time great like Brady, LeBron, Jordan, etc),\n  "HOF" (if hall of famer),\n  "Elite" (if elite level player),\n  "Superstar" (if superstar player),\n  "Breakout" (if breakout/rising player)\n\nImportant: cardNumber is the card catalog number like #304. printRun is the limited edition number like 1/5 or 45/99. These are different fields.\nIf cardNumber is not clearly visible, use empty string "".\nNo markdown, no extra text, only JSON.' }
+            { type: 'text', text: 'This is a sports card. Analyze it and respond with ONLY a JSON object with these fields:\n- player (string)\n- year (string)\n- brand (string)\n- cardNumber (string or empty string "" if not visible on the card)\n- variation (string)\n- printRun (string - ONLY if there is a print run number visible on the card. Return ONLY the total, formatted as "/Y". For example if you see "003/125" return "/125", if you see "045/99" return "/99", if you see "1/1" return "/1". If no print run visible, return empty string "")\n- tags (array of strings from this list only):\n  "Auto" (if autograph present),\n  "RPA" (if rookie patch auto),\n  "Numbered" (if print run shown like /10 /99 /149 etc),\n  "Case Hit",\n  "Parallel" (include type like "Parallel - Prizm Gold"),\n  "Rookie" (if rookie card),\n  "GOAT" (if all-time great like Brady, LeBron, Jordan, etc),\n  "HOF" (if hall of famer),\n  "Elite" (if elite level player),\n  "Superstar" (if superstar player),\n  "Breakout" (if breakout/rising player)\n\nImportant: cardNumber is the card catalog number like #304. printRun is the limited edition number shown as "/125" or "/99". These are different fields.\nIf cardNumber is not clearly visible, use empty string "".\nNo markdown, no extra text, only JSON.' }
           ]
         }]
       })
